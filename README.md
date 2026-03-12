@@ -33,6 +33,8 @@ Local app: **Instagram Followback**
 
 Users can run it locally and keep the entire live-session flow on their own machine.
 
+Current release: [`v0.2.0`](../../releases/tag/v0.2.0)
+
 ## Preview
 
 ### Core experience
@@ -234,6 +236,14 @@ python3 -m py_compile instagram_followback_web.py instagram_followback_live.py i
 - export mode is still useful for offline and archive-based workflows
 - Instagram may show login or verification prompts during live mode, which is why the browser is visible by default
 - the local web UI is the intended primary interface for this project
+
+## Security
+
+See [`SECURITY.md`](./SECURITY.md) for local-session handling, sensitive data guidance, and responsible disclosure notes.
+
+## Changelog
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for release history.
 
 ## License
 
