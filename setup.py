@@ -3,8 +3,8 @@ from setuptools import setup
 
 setup(
     name="instagram-followback-checker",
-    version="0.1.0",
-    description="CLI tool for analyzing followback relationships from official Instagram JSON exports",
+    version="0.2.0",
+    description="Local web app and CLI for analyzing Instagram followback relationships",
     extras_require={
         "live": ["playwright>=1.55,<2"],
     },

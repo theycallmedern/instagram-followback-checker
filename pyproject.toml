@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "instagram-followback-checker"
-version = "0.1.0"
-description = "CLI tool for analyzing followback relationships from official Instagram JSON exports"
+version = "0.2.0"
+description = "Local web app and CLI for analyzing Instagram followback relationships"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}

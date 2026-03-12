@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 USERNAME_RE = re.compile(r"[a-z0-9._]{1,30}")
 INSTAGRAM_HOSTS = {"instagram.com", "www.instagram.com", "m.instagram.com"}
 RESERVED_PATH_SEGMENTS = {"p", "reel", "stories", "tv", "explore", "accounts"}
