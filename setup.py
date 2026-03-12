@@ -5,6 +5,7 @@ setup(
     name="instagram-followback-checker",
     version="0.2.0",
     description="Local web app and CLI for analyzing Instagram followback relationships",
+    author="Misha Belyakov",
     extras_require={
         "live": ["playwright>=1.55,<2"],
     },
