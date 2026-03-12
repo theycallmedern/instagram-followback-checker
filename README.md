@@ -1,54 +1,143 @@
-# Instagram Non-Followers Checker
+# Instagram Followback Checker
 
-Локальный скрипт, который берет официальный экспорт Instagram и показывает:
+A small local CLI tool that reads an official Instagram `JSON` export and helps you inspect followback relationships:
 
-- на кого вы подписаны;
-- кто из них не подписан на вас в ответ.
+- accounts you follow that do not follow you back
+- accounts that follow you, but you do not follow back
+- mutual follows
 
-Скрипт не использует неофициальный API и не логинится в Instagram.
+It works entirely offline after you download your export.
 
-## Что нужно скачать из Instagram
+## Highlights
 
-В Instagram выбери экспорт данных аккаунта в формате `JSON`.
+- Uses the official Instagram export instead of an unofficial API
+- Supports extracted folders and `.zip` archives
+- Includes multiple analysis modes: non-followers, fans, and mutuals
+- Can export results to `CSV`, `TXT`, and `JSON`
+- Provides summary-only mode, sorting, and output limits
+- Ships with tests, packaging metadata, and CI
 
-Обычно это делается через:
+## Requirements
 
-- `Settings`
-- `Accounts Center`
-- `Your information and permissions`
-- `Download your information`
+- Python `3.9+`
 
-После этого у тебя будет папка с JSON-файлами или ZIP-архив.
+## Request your Instagram export
 
-## Запуск
+Request your account data from Instagram in `JSON` format.
 
-Из этой папки:
+Typical path:
+
+1. `Settings`
+2. `Accounts Center`
+3. `Your information and permissions`
+4. `Download your information`
+
+Choose `JSON`, then download the archive when it is ready.
+
+The tool can read either:
+
+- the downloaded `.zip` file directly
+- or the extracted export folder
+
+## Quick Start
+
+Run the main module directly:
 
 ```bash
-python3 instagram_nonfollowers.py /path/to/instagram-export
+python3 instagram_followback_checker.py /path/to/instagram-export.zip
 ```
 
-Если у тебя ZIP:
+The legacy filename still works too:
 
 ```bash
 python3 instagram_nonfollowers.py /path/to/instagram-export.zip
 ```
 
-## Сохранить результат в файл
+If you install the project locally, you also get a console command:
 
 ```bash
-python3 instagram_nonfollowers.py /path/to/instagram-export \
-  --csv not_following_back.csv \
-  --json not_following_back.json
+pip install .
+ig-followback /path/to/instagram-export.zip
 ```
 
-## Полезно
+## Analysis Modes
 
-- `--verbose` покажет, какие JSON-файлы были использованы.
-- Имена приводятся к lowercase, потому что usernames в Instagram регистронезависимы.
-
-## Пример
+### Default: accounts that do not follow you back
 
 ```bash
-python3 instagram_nonfollowers.py ~/Downloads/instagram-export --verbose
+python3 instagram_followback_checker.py /path/to/export.zip
 ```
+
+### Fans: accounts that follow you, but you do not follow back
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip --fans
+```
+
+### Mutual follows
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip --mutuals
+```
+
+## Output Controls
+
+### Show summary counts only
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip --stats-only
+```
+
+### Sort and limit results
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip --sort length --limit 50
+```
+
+### Show which export files were used
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip --verbose
+```
+
+## Save Reports
+
+### Save all selected results
+
+```bash
+python3 instagram_followback_checker.py /path/to/export.zip \
+  --csv output.csv \
+  --txt output.txt \
+  --json output.json
+```
+
+### CSV format
+
+The CSV report includes:
+
+- `username`
+- `profile_url`
+
+## Example
+
+```bash
+python3 instagram_followback_checker.py ~/Downloads/instagram-export.zip \
+  --fans \
+  --sort alpha \
+  --limit 100 \
+  --csv fans.csv
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+## Notes
+
+- The export must be in `JSON` format, not `HTML`
+- Usernames are normalized to lowercase because Instagram usernames are case-insensitive
+- The parser is intentionally narrow and focuses on follower/following sections to avoid false positives
