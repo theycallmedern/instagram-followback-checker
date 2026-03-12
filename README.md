@@ -1,249 +1,215 @@
-# Instagram Followback Checker
+# Instagram Followback
 
-A small local CLI tool that reads an official Instagram `JSON` export and helps you inspect followback relationships:
+A local Instagram followback checker with a live web interface.
 
-- accounts you follow that do not follow you back
-- accounts that follow you, but you do not follow back
-- mutual follows
+It opens Instagram in a real local browser session, reads your current `followers` and `following`, and shows:
 
-It works entirely offline after you download your export.
+- `Non-followers` — accounts you follow that do not follow you back
+- `Fans` — accounts that follow you, but you do not follow back
+- `Mutuals` — accounts that follow each other
 
-There is also a dedicated live web UI that uses a local Playwright browser session to inspect your current Instagram `followers` and `following` directly.
+No unofficial API is required. No cloud backend is involved. Your live session stays on your machine.
 
-## Highlights
+## What It Looks Like
 
-- Uses the official Instagram export instead of an unofficial API
-- Supports extracted folders and `.zip` archives
-- Includes multiple analysis modes: non-followers, fans, and mutuals
-- Can export results to `CSV`, `TXT`, and `JSON`
-- Provides summary-only mode, sorting, and output limits
-- Includes an experimental live scanner for current on-screen Instagram data
-- Ships with tests, packaging metadata, and CI
+- Clean local web app
+- Live Instagram session connect / disconnect
+- One-click live scan
+- In-browser search, inspect, ignore list, and history
+- `CSV`, `TXT`, and `JSON` downloads
+
+## Why This Project
+
+Most Instagram followback tools are either:
+
+- sketchy web apps
+- browser extensions with unclear data handling
+- broken scrapers
+- export-only scripts with weak UX
+
+This project takes a different path:
+
+- local-first
+- browser-based live scan
+- readable UI
+- explicit privacy model
+
+## Features
+
+- Live local web UI built around the current Instagram session
+- Connect once, reuse the saved session locally
+- Disconnect button that clears the saved session
+- Modes: `Non-followers`, `Fans`, `Mutuals`
+- Sorting: `alpha`, `length`
+- Optional result limit
+- `Summary only` mode
+- Search results by username
+- Inspect one username against the latest live scan
+- Ignore noisy accounts from the table
+- Local scan history with simple change tracking
+- Export reports as `CSV`, `TXT`, or `JSON`
+- CLI support for both live mode and export mode
+
+## Privacy
+
+This app is designed to keep your data local.
+
+- The live browser session is stored locally under `~/.instagram-followback-checker/live-session`
+- That session directory is ignored by git
+- No Instagram session files are stored in this repository
+- No server uploads are required for the live workflow
+- The web UI runs locally on `127.0.0.1`
+
+If you click `Disconnect`, the saved local Instagram session is deleted.
 
 ## Requirements
 
 - Python `3.9+`
-
-## Request your Instagram export
-
-Request your account data from Instagram in `JSON` format.
-
-Typical path:
-
-1. `Settings`
-2. `Accounts Center`
-3. `Your information and permissions`
-4. `Download your information`
-
-Choose `JSON`, then download the archive when it is ready.
-
-The tool can read either:
-
-- the downloaded `.zip` file directly
-- or the extracted export folder
+- macOS / Linux / Windows with Python installed
+- For live mode: Playwright + Chromium
 
 ## Quick Start
 
-Run the main module directly:
+### 1. Install dependencies
 
 ```bash
-python3 instagram_followback_checker.py /path/to/instagram-export.zip
+python3 -m pip install ".[live]"
+python3 -m playwright install chromium
 ```
 
-The legacy filename still works too:
-
-```bash
-python3 instagram_nonfollowers.py /path/to/instagram-export.zip
-```
-
-### Run the local web interface
+### 2. Start the local web app
 
 ```bash
 python3 instagram_followback_web.py
 ```
 
-Then open:
+Open:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-If you install the project locally, you also get a console command:
+### 3. Connect Instagram
+
+In the UI:
+
+1. Click `Connect`
+2. Log in inside the opened Instagram browser window if needed
+3. Return to the local app
+4. Click `Run scan`
+
+## Main Workflow
+
+### Connect
+
+Creates or reuses a local Instagram browser session.
+
+### Run scan
+
+Collects your current `followers` and `following` directly from Instagram Web and builds a report.
+
+### Review
+
+Use the results panel to:
+
+- switch between `Non-followers`, `Fans`, and `Mutuals`
+- search usernames
+- inspect one account
+- ignore low-value entries
+- download reports
+
+### Disconnect
+
+Deletes the saved local Instagram session from your machine.
+
+## Install as Commands
 
 ```bash
 pip install .
+```
+
+Then you can use:
+
+```bash
 ig-followback-ui
+ig-followback-live
+ig-followback
 ```
 
-The web UI lets you:
+## CLI
 
-- connect a live Instagram browser session without using terminal prompts
-- switch between non-followers, fans, and mutuals
-- keep the session locally on your machine
-- watch progress while the live scan is running
-- search the result list in the browser
-- inspect one username against the current live scan
-- keep an ignore list for noisy accounts
-- save local scan history and compare the latest scan with the previous one
-- see stats cards and a result table
-- download `CSV`, `TXT`, and `JSON` directly from the browser
+### Live mode
 
-The web UI is now focused on live mode only. Export-file analysis is still available from the CLI, but the browser interface is intentionally built around the current Instagram session flow.
-
-### Live mode in the web UI
-
-Open the local UI, then:
-
-1. Click `Connect Instagram`
-2. A separate Instagram browser window opens
-3. Log in there if Instagram asks
-4. Return to the local UI page after it finishes
-5. Click `Run Live Scan`
-
-The UI stores the live session locally and reuses it on the next run.
-
-For the CLI, local installation also gives you a short command:
+Save a session only:
 
 ```bash
-pip install .
-ig-followback /path/to/instagram-export.zip
+ig-followback-live --login-only
 ```
 
-## Experimental Live Mode
-
-Live mode is different from export mode:
-
-- `export mode` reads the `.zip` archive you downloaded from Instagram
-- `live mode` opens Instagram in a real browser window and collects the lists that are visible right now
-
-Install the optional dependency first:
-
-```bash
-pip install ".[live]"
-python3 -m playwright install chromium
-```
-
-Save a logged-in browser session:
-
-```bash
-python3 instagram_followback_live.py --login-only
-```
-
-Then run a live scan:
-
-```bash
-python3 instagram_followback_live.py
-```
-
-The script will ask for your Instagram username in Terminal. You can also leave it empty and let it try to detect the username from the logged-in session.
-
-Or use the installed console command:
+Run a live scan:
 
 ```bash
 ig-followback-live
 ```
 
-Useful live-mode examples:
+Useful examples:
 
 ```bash
-ig-followback-live --username <your_username> --stats-only
-ig-followback-live --username <your_username> --fans
-ig-followback-live --username <your_username> --mutuals --sort length --limit 50
-ig-followback-live --username <your_username> --inspect some_account
+ig-followback-live --stats-only
+ig-followback-live --fans
+ig-followback-live --mutuals --sort length --limit 50
+ig-followback-live --inspect some_account
 ```
 
-If the session already belongs to your Instagram account, you can also omit `--username` and let the script detect it automatically:
+### Export mode
+
+The repo still includes the original export analyzer.
+
+Run it on an official Instagram `JSON` export:
 
 ```bash
-python3 instagram_followback_live.py
+ig-followback /path/to/instagram-export.zip
 ```
 
-Notes for live mode:
-
-- it uses a visible local browser by default
-- the browser session is stored under `~/.instagram-followback-checker/live-session`
-- the first login is manual on purpose
-- Instagram can change the web UI, so live mode is more fragile than export mode
-
-## Analysis Modes
-
-### Default: accounts that do not follow you back
+Examples:
 
 ```bash
-python3 instagram_followback_checker.py /path/to/export.zip
+ig-followback /path/to/export.zip --fans
+ig-followback /path/to/export.zip --mutuals --sort length --limit 50
+ig-followback /path/to/export.zip --csv output.csv --txt output.txt --json output.json
 ```
 
-### Fans: accounts that follow you, but you do not follow back
+## Project Structure
 
-```bash
-python3 instagram_followback_checker.py /path/to/export.zip --fans
+```text
+instagram_followback_checker.py   Export-based CLI
+instagram_followback_live.py      Live scanner via Playwright
+instagram_followback_web.py       Local web UI
+instagram_nonfollowers.py         Legacy wrapper
+tests/                            Test suite
 ```
 
-### Mutual follows
+## Development
+
+Run tests:
 
 ```bash
-python3 instagram_followback_checker.py /path/to/export.zip --mutuals
+python3 -m unittest tests.test_instagram_nonfollowers tests.test_instagram_followback_live -v
 ```
 
-## Output Controls
-
-### Show summary counts only
+Quick syntax check:
 
 ```bash
-python3 instagram_followback_checker.py /path/to/export.zip --stats-only
-```
-
-### Sort and limit results
-
-```bash
-python3 instagram_followback_checker.py /path/to/export.zip --sort length --limit 50
-```
-
-### Show which export files were used
-
-```bash
-python3 instagram_followback_checker.py /path/to/export.zip --verbose
-```
-
-## Save Reports
-
-### Save all selected results
-
-```bash
-python3 instagram_followback_checker.py /path/to/export.zip \
-  --csv output.csv \
-  --txt output.txt \
-  --json output.json
-```
-
-### CSV format
-
-The CSV report includes:
-
-- `username`
-- `profile_url`
-
-## Example
-
-```bash
-python3 instagram_followback_checker.py ~/Downloads/instagram-export.zip \
-  --fans \
-  --sort alpha \
-  --limit 100 \
-  --csv fans.csv
-```
-
-## Testing
-
-Run the test suite:
-
-```bash
-python3 -m unittest discover -s tests -v
+python3 -m py_compile instagram_followback_web.py instagram_followback_live.py instagram_followback_checker.py
 ```
 
 ## Notes
 
-- The export must be in `JSON` format, not `HTML`
-- Usernames are normalized to lowercase because Instagram usernames are case-insensitive
-- The parser is intentionally narrow and focuses on follower/following sections to avoid false positives
-- If follower dates start much later than following dates, the export was likely requested with a limited time range and may produce false non-followers
+- Live mode is more useful than export mode for current account state, but also more fragile because Instagram can change its web UI
+- Export mode is still useful when you want an offline or archive-based workflow
+- Instagram may show login or verification prompts during live mode; the app is built around a visible browser for that reason
+- For best results, use the local web UI as the primary interface
+
+## License
+
+MIT
