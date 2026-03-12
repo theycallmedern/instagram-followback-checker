@@ -10,6 +10,10 @@ It opens Instagram in a real local browser session, reads your current `follower
 
 No unofficial API is required. No cloud backend is involved. Your live session stays on your machine.
 
+![Overview](docs/screenshots/overview.png)
+
+![Results](docs/screenshots/results.png)
+
 ## What It Looks Like
 
 - Clean local web app
