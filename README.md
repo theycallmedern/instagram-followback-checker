@@ -31,7 +31,7 @@ The project keeps the runtime simple:
 
 Local app: **Instagram Followback**
 
-If you are sharing this repository publicly, users can run it locally and keep the entire live-session flow on their own machine.
+Users can run it locally and keep the entire live-session flow on their own machine.
 
 ## Preview
 
@@ -56,7 +56,7 @@ The main flow is built for one clean loop: connect Instagram once, run a live sc
 
 ### Workflow focus
 
-The app is intentionally narrow.
+The app is intentionally narrow and focused.
 
 It is optimized for:
 
@@ -118,7 +118,7 @@ If you click `Disconnect`, the saved local Instagram session is deleted from you
 ## Requirements
 
 - Python `3.9+`
-- Playwright + Chromium for live mode
+- Playwright with Chromium for live mode
 
 ## Quick Start
 
@@ -143,10 +143,10 @@ http://127.0.0.1:8000
 
 ### Connect and scan
 
-1. click `Connect`
-2. log in inside the opened Instagram browser window if needed
-3. return to the local app
-4. click `Run scan`
+1. Click `Connect`
+2. Log in inside the opened Instagram browser window if needed
+3. Return to the local app
+4. Click `Run scan`
 
 ## CLI
 
@@ -230,8 +230,8 @@ python3 -m py_compile instagram_followback_web.py instagram_followback_live.py i
 
 ## Notes
 
-- live mode is more useful for current account state, but also more fragile because Instagram can change its web UI
-- export mode is still useful for offline or archive-based workflows
+- live mode is best for current account state, but it is also more fragile because Instagram can change its web UI
+- export mode is still useful for offline and archive-based workflows
 - Instagram may show login or verification prompts during live mode, which is why the browser is visible by default
 - the local web UI is the intended primary interface for this project
 
