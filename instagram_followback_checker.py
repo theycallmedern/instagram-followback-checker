@@ -10,6 +10,7 @@ import re
 import sys
 import zipfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
@@ -17,6 +18,7 @@ from urllib.parse import urlparse
 VERSION = "0.1.0"
 USERNAME_RE = re.compile(r"[a-z0-9._]{1,30}")
 INSTAGRAM_HOSTS = {"instagram.com", "www.instagram.com", "m.instagram.com"}
+RESERVED_PATH_SEGMENTS = {"p", "reel", "stories", "tv", "explore", "accounts"}
 RELATION_KEYS = {
     "followers": "relationships_followers",
     "following": "relationships_following",
@@ -26,6 +28,7 @@ MODE_LABELS = {
     "fans": "Accounts that follow you, but you do not follow back",
     "mutuals": "Mutual follow relationships",
 }
+DATE_RANGE_WARNING_DAYS = 180
 
 
 class ExportError(RuntimeError):
@@ -42,6 +45,8 @@ class AnalysisResult:
     following: Set[str]
     follower_files: List[str]
     following_files: List[str]
+    follower_timestamps: List[int]
+    following_timestamps: List[int]
 
     def not_following_back(self) -> List[str]:
         return sorted(self.following - self.followers)
@@ -68,6 +73,53 @@ class AnalysisResult:
             "nonfollowers": len(self.following - self.followers),
             "fans": len(self.followers - self.following),
             "mutuals": len(self.followers & self.following),
+        }
+
+    def relation_time_ranges(self) -> dict[str, dict[str, str] | None]:
+        return {
+            "followers": summarize_timestamps(self.follower_timestamps),
+            "following": summarize_timestamps(self.following_timestamps),
+        }
+
+    def warnings(self) -> List[str]:
+        warnings: List[str] = []
+        time_ranges = self.relation_time_ranges()
+        follower_range = time_ranges["followers"]
+        following_range = time_ranges["following"]
+
+        if follower_range and following_range:
+            start_gap_days = (
+                int(follower_range["start_timestamp"]) - int(following_range["start_timestamp"])
+            ) / 86400
+            if start_gap_days >= DATE_RANGE_WARNING_DAYS:
+                warnings.append(
+                    "Followers data starts much later than following data "
+                    f"({follower_range['start_date']} vs {following_range['start_date']}). "
+                    "This export may have been requested with a limited date range, so older "
+                    "followers can be missing from the report."
+                )
+
+        return warnings
+
+    def inspect_username(self, username: str) -> dict[str, bool | str]:
+        normalized = normalize_username(username) or username.strip().lower()
+        in_followers = normalized in self.followers
+        in_following = normalized in self.following
+
+        if in_followers and in_following:
+            relationship = "mutual"
+        elif in_following:
+            relationship = "not_following_back"
+        elif in_followers:
+            relationship = "fan"
+        else:
+            relationship = "not_found"
+
+        return {
+            "username": normalized,
+            "in_followers": in_followers,
+            "in_following": in_following,
+            "relationship": relationship,
         }
 
 
@@ -139,6 +191,20 @@ def profile_url_for(username: str) -> str:
     return f"https://www.instagram.com/{username}/"
 
 
+def summarize_timestamps(timestamps: Sequence[int]) -> Optional[dict[str, str]]:
+    if not timestamps:
+        return None
+
+    start_timestamp = min(timestamps)
+    end_timestamp = max(timestamps)
+    return {
+        "start_timestamp": str(start_timestamp),
+        "end_timestamp": str(end_timestamp),
+        "start_date": datetime.fromtimestamp(start_timestamp, tz=timezone.utc).date().isoformat(),
+        "end_date": datetime.fromtimestamp(end_timestamp, tz=timezone.utc).date().isoformat(),
+    }
+
+
 def normalize_username(raw: Any) -> Optional[str]:
     if not isinstance(raw, str):
         return None
@@ -155,9 +221,16 @@ def normalize_username(raw: Any) -> Optional[str]:
         segments = [segment for segment in parsed.path.split("/") if segment]
         if not segments:
             return None
-        if segments[0] in {"p", "reel", "stories", "tv", "explore"}:
+        # Instagram exports can contain service links such as "/_u/<username>/".
+        # "_u" is not a real username and should be unwrapped or ignored.
+        if segments[0] == "_u":
+            if len(segments) < 2:
+                return None
+            value = segments[1]
+        elif segments[0] in RESERVED_PATH_SEGMENTS:
             return None
-        value = segments[0]
+        else:
+            value = segments[0]
 
     value = value.lstrip("@").strip().strip("/").lower()
     if USERNAME_RE.fullmatch(value):
@@ -165,31 +238,36 @@ def normalize_username(raw: Any) -> Optional[str]:
     return None
 
 
-def collect_relation_usernames(node: Any) -> Set[str]:
+def collect_relation_data(node: Any) -> tuple[Set[str], List[int]]:
     usernames: Set[str] = set()
+    timestamps: List[int] = []
 
     if isinstance(node, list):
         for item in node:
-            usernames.update(collect_relation_usernames(item))
-        return usernames
+            child_usernames, child_timestamps = collect_relation_data(item)
+            usernames.update(child_usernames)
+            timestamps.extend(child_timestamps)
+        return usernames, timestamps
 
     if not isinstance(node, dict):
-        return usernames
-
-    string_list = node.get("string_list_data")
-    if isinstance(string_list, list):
-        usernames.update(collect_relation_usernames(string_list))
+        return usernames, timestamps
 
     for key in ("value", "href", "username"):
         username = normalize_username(node.get(key))
         if username is not None:
             usernames.add(username)
 
+    timestamp = node.get("timestamp")
+    if isinstance(timestamp, (int, float)) and not isinstance(timestamp, bool):
+        timestamps.append(int(timestamp))
+
     for value in node.values():
         if isinstance(value, (dict, list)):
-            usernames.update(collect_relation_usernames(value))
+            child_usernames, child_timestamps = collect_relation_data(value)
+            usernames.update(child_usernames)
+            timestamps.extend(child_timestamps)
 
-    return usernames
+    return usernames, timestamps
 
 
 def relation_payload(payload: Any, relation: str) -> Any:
@@ -199,7 +277,15 @@ def relation_payload(payload: Any, relation: str) -> Any:
 
 
 def path_relation_hint(name: str) -> Optional[str]:
-    basename = PurePosixPath(name).name.lower()
+    pure_path = PurePosixPath(name)
+    basename = pure_path.name.lower()
+    path_parts = {part.lower() for part in pure_path.parts}
+
+    # Only accept relationship files from the Instagram export section that
+    # stores followers/following data. This avoids mixing in Threads or
+    # unrelated activity files that happen to reuse generic file names.
+    if "followers_and_following" not in path_parts or "threads" in path_parts:
+        return None
 
     if re.fullmatch(r"(?:followers|relationships_followers)(?:_\d+)?\.json", basename):
         return "followers"
@@ -221,18 +307,20 @@ def payload_relation_hints(payload: Any) -> List[str]:
 
 def load_relation_documents(
     source: JsonSource, names: Iterable[str], relation: str
-) -> tuple[Set[str], List[str]]:
+) -> tuple[Set[str], List[str], List[int]]:
     usernames: Set[str] = set()
     used_files: List[str] = []
+    timestamps: List[int] = []
 
     for name in names:
         payload = source.read_json(name)
-        extracted = collect_relation_usernames(relation_payload(payload, relation))
+        extracted, extracted_timestamps = collect_relation_data(relation_payload(payload, relation))
         if extracted:
             usernames.update(extracted)
             used_files.append(name)
+            timestamps.extend(extracted_timestamps)
 
-    return usernames, used_files
+    return usernames, used_files, timestamps
 
 
 def analyze_export(path: Path) -> AnalysisResult:
@@ -261,8 +349,12 @@ def analyze_export(path: Path) -> AnalysisResult:
         follower_candidates = [name for name in json_names if path_relation_hint(name) == "followers"]
         following_candidates = [name for name in json_names if path_relation_hint(name) == "following"]
 
-        followers, follower_files = load_relation_documents(source, follower_candidates, "followers")
-        following, following_files = load_relation_documents(source, following_candidates, "following")
+        followers, follower_files, follower_timestamps = load_relation_documents(
+            source, follower_candidates, "followers"
+        )
+        following, following_files, following_timestamps = load_relation_documents(
+            source, following_candidates, "following"
+        )
 
         inspected = set(follower_candidates + following_candidates)
         need_deep_scan = not followers or not following
@@ -273,15 +365,19 @@ def analyze_export(path: Path) -> AnalysisResult:
                     continue
                 payload = source.read_json(name)
                 for relation in payload_relation_hints(payload):
-                    extracted = collect_relation_usernames(relation_payload(payload, relation))
+                    extracted, extracted_timestamps = collect_relation_data(
+                        relation_payload(payload, relation)
+                    )
                     if not extracted:
                         continue
                     if relation == "followers":
                         followers.update(extracted)
                         follower_files.append(name)
+                        follower_timestamps.extend(extracted_timestamps)
                     else:
                         following.update(extracted)
                         following_files.append(name)
+                        following_timestamps.extend(extracted_timestamps)
 
     if not followers:
         raise ExportError(
@@ -297,6 +393,8 @@ def analyze_export(path: Path) -> AnalysisResult:
         following=following,
         follower_files=sorted(set(follower_files)),
         following_files=sorted(set(following_files)),
+        follower_timestamps=follower_timestamps,
+        following_timestamps=following_timestamps,
     )
 
 
@@ -344,6 +442,8 @@ def write_json_report(
         "sort": sort_mode,
         "limit": limit,
         "stats": result.stats(),
+        "time_ranges": result.relation_time_ranges(),
+        "warnings": result.warnings(),
         "entries": [
             {"username": username, "profile_url": profile_url_for(username)}
             for username in usernames
@@ -414,6 +514,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show which JSON files were used for the calculation.",
     )
     parser.add_argument(
+        "--inspect",
+        metavar="USERNAME",
+        help="Inspect one specific username and show how it was classified.",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"instagram-followback-checker {VERSION}",
@@ -428,6 +533,23 @@ def print_summary(result: AnalysisResult) -> None:
     print(f"Do not follow back: {stats['nonfollowers']}")
     print(f"Fans: {stats['fans']}")
     print(f"Mutuals: {stats['mutuals']}")
+
+    time_ranges = result.relation_time_ranges()
+    follower_range = time_ranges["followers"]
+    following_range = time_ranges["following"]
+    if follower_range:
+        print(
+            "Followers time range: "
+            f"{follower_range['start_date']} to {follower_range['end_date']}"
+        )
+    if following_range:
+        print(
+            "Following time range: "
+            f"{following_range['start_date']} to {following_range['end_date']}"
+        )
+
+    for warning in result.warnings():
+        print(f"Warning: {warning}")
 
 
 def print_verbose_files(result: AnalysisResult) -> None:
@@ -455,6 +577,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     displayed_usernames = apply_limit(selected_usernames, args.limit)
 
     print_summary(result)
+
+    if args.inspect:
+        inspected = result.inspect_username(args.inspect)
+        print("\nInspect:")
+        print(f"Username: {inspected['username']}")
+        print(f"In followers: {inspected['in_followers']}")
+        print(f"In following: {inspected['in_following']}")
+        print(f"Relationship: {inspected['relationship']}")
 
     if args.verbose:
         print_verbose_files(result)

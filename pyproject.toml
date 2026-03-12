@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-  {name = "theycallmedern", email = "mishabeliako@icloud.com"}
+  {name = "Instagram Followback Checker contributors"}
 ]
 keywords = ["instagram", "cli", "export", "followers", "followback"]
 classifiers = [
@@ -26,8 +26,18 @@ classifiers = [
   "Topic :: Utilities"
 ]
 
+[project.optional-dependencies]
+live = ["playwright>=1.55,<2"]
+
 [project.scripts]
 ig-followback = "instagram_followback_checker:main"
+ig-followback-ui = "instagram_followback_web:main"
+ig-followback-live = "instagram_followback_live:main"
 
 [tool.setuptools]
-py-modules = ["instagram_followback_checker", "instagram_nonfollowers"]
+py-modules = [
+  "instagram_followback_checker",
+  "instagram_followback_live",
+  "instagram_followback_web",
+  "instagram_nonfollowers",
+]

@@ -8,3 +8,6 @@ build/
 *.zip
 *.csv
 *.json
+.instagram-followback-checker/
+live-session/
+history/
