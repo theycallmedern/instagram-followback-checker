@@ -1,6 +1,11 @@
-# Instagram Followback
+<h1 align="center">
+  <img src="./docs/branding/readme-app-icon.png" alt="Instagram Followback app icon" width="44" />
+  Instagram Followback
+</h1>
 
-Instagram Followback is a local-first desktop app for understanding your Instagram relationship graph with a clean, modern workflow.
+<p align="center">
+  <strong>Local-first desktop app for understanding your Instagram relationship graph with a clean, modern workflow.</strong>
+</p>
 
 It is designed around one strong loop:
 
@@ -9,6 +14,9 @@ It is designed around one strong loop:
 - review non-followers, fans, mutuals, diagnostics, and search results in one polished desktop workspace
 
 No cloud backend. No hosted dashboards. No account export ritual every time you want a current answer.
+
+> [!IMPORTANT]
+> Instagram Followback is a local product. The desktop app, the saved session, and the analysis flow stay on your machine.
 
 ## Why It Feels Different
 
@@ -46,7 +54,8 @@ The result is a tool that feels less like a hack and more like a serious local p
 
 ## Screenshots
 
-The screenshots below are synthetic product captures generated from the desktop UI. They do not contain real account data.
+> [!NOTE]
+> The screenshot below is a synthetic product capture generated from the desktop UI. It does not contain real account data.
 
 <p align="center">
   <img src="./docs/screenshots/hero-workspace.png" alt="Wide desktop hero showing the connected Instagram workspace, summary metrics, and polished product shell" width="960" />
@@ -57,6 +66,9 @@ The screenshots below are synthetic product captures generated from the desktop 
 ## Desktop Quick Start
 
 ### Install the released app
+
+> [!TIP]
+> If you just want the desktop product, start from GitHub Releases instead of building from source.
 
 If you just want to use the desktop product, download the latest release from GitHub Releases and install the bundle for your platform:
 
@@ -127,8 +139,8 @@ After the session is connected, scans run in the background by default.
 
 If Instagram asks for login again later, reconnect once and continue.
 
-Note:
-The desktop app can attach the saved local session first and resolve the account name and avatar immediately after. That is expected behavior for the current desktop flow.
+> [!NOTE]
+> The desktop app can attach the saved local session first and resolve the account name and avatar immediately after. That is expected behavior for the current desktop flow.
 
 ## Browser And CLI Fallbacks
 
