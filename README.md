@@ -8,7 +8,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/theycallmedern/instagram-followback-checker/releases/latest"><img src="https://img.shields.io/github/v/release/theycallmedern/instagram-followback-checker?style=for-the-badge&label=Release&labelColor=52525b&color=60a5fa" alt="Latest release" /></a><a href="https://github.com/theycallmedern/instagram-followback-checker/actions/workflows/desktop-build.yml"><img src="https://img.shields.io/github/actions/workflow/status/theycallmedern/instagram-followback-checker/desktop-build.yml?branch=main&style=for-the-badge&label=Desktop%20Build&labelColor=52525b&color=f59e0b" alt="Desktop build status" /></a><a href="./SECURITY.md"><img src="https://img.shields.io/badge/Security-Local--first-34d399?style=for-the-badge&labelColor=52525b" alt="Security local-first" /></a><a href="./LICENSE"><img src="https://img.shields.io/github/license/theycallmedern/instagram-followback-checker?style=for-the-badge&label=License&labelColor=52525b&color=94a3b8" alt="License MIT" /></a>
+  <a href="https://github.com/theycallmedern/instagram-followback-checker/releases/latest"><img src="./docs/branding/buttons/latest_release.png" alt="Latest release" height="52" /></a><a href="https://github.com/theycallmedern/instagram-followback-checker/actions/workflows/desktop-build.yml"><img src="./docs/branding/buttons/desktop_build_status.png" alt="Desktop build status" height="52" /></a>
+</p>
+<p align="center">
+  <a href="./SECURITY.md"><img src="./docs/branding/buttons/security.png" alt="Security" height="52" /></a><a href="./SECURITY.md"><img src="./docs/branding/buttons/local_first.png" alt="Local-first" height="52" /></a><a href="./LICENSE"><img src="./docs/branding/buttons/license.png" alt="License" height="52" /></a><a href="./LICENSE"><img src="./docs/branding/buttons/mit.png" alt="MIT" height="52" /></a>
 </p>
 
 It is designed around one strong loop:
