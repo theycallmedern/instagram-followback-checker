@@ -1,13 +1,7 @@
-<table align="center">
-  <tr>
-    <td valign="middle">
-      <img src="./docs/branding/readme-app-icon.png" alt="Instagram Followback app icon" width="64" />
-    </td>
-    <td valign="middle">
-      <h1>Instagram Followback</h1>
-    </td>
-  </tr>
-</table>
+<h1 align="center">
+  <img src="./docs/branding/readme-app-icon.png" alt="Instagram Followback app icon" width="72" align="absmiddle" />
+  Instagram Followback
+</h1>
 
 <p align="center">
   <strong>Local-first desktop app for understanding your Instagram relationship graph with a clean, modern workflow.</strong>
