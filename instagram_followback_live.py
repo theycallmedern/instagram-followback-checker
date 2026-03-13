@@ -9,7 +9,9 @@ import base64
 import json
 import re
 import shutil
+import sqlite3
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Set
@@ -33,8 +35,11 @@ from instagram_followback_checker import (
 )
 
 DEFAULT_SESSION_DIR = Path.home() / ".instagram-followback-checker" / "live-session"
-DEFAULT_LOGIN_WAIT_MS = 240000
+DEFAULT_LOGIN_WAIT_MS = 600000
+POST_LOGIN_IDENTITY_WAIT_MS = 15000
 SESSION_INFO_FILENAME = "ig_followback_live_session.json"
+LOGIN_DEBUG_FILENAME = "ig_followback_login_debug.log"
+LOGIN_STATE_FILENAME = "ig_followback_login_state.json"
 RELATION_PATHS = {"followers", "following"}
 STALL_TOLERANCE_ROUNDS = 8
 PLACEHOLDER_USERNAMES = {
@@ -47,9 +52,15 @@ PLACEHOLDER_USERNAMES = {
 LOGIN_TEXT_MARKERS = (
     "log in",
     "login",
+    "log into instagram",
     "sign up",
     "see instagram photos and videos",
     "continue as",
+)
+LOGIN_URL_MARKERS = (
+    "/accounts/login",
+    "/challenge/",
+    "/two_factor/",
 )
 DISMISS_BUTTON_MARKERS = (
     "not now",
@@ -60,6 +71,30 @@ DISMISS_BUTTON_MARKERS = (
     "закрыть",
     "skip",
     "пропустить",
+)
+PROFILE_LABEL_MARKERS = (
+    "profile",
+    "профиль",
+    "perfil",
+    "profil",
+    "profilo",
+)
+USERNAME_INPUT_SELECTORS = (
+    "input[name='username']",
+    "input[autocomplete='username']",
+    "input[aria-label='Username']",
+    "input[aria-label='Имя пользователя']",
+)
+AUTHENTICATED_SHELL_HREFS = (
+    "/reels/",
+    "/direct/inbox/",
+    "/explore/",
+)
+AUTHENTICATED_SHELL_LABELS = (
+    "home",
+    "reels",
+    "messages",
+    "profile",
 )
 SCROLL_TO_END_SCRIPT = r"""
 () => {
@@ -190,6 +225,63 @@ def session_info_path(session_dir: Path) -> Path:
     return session_dir / SESSION_INFO_FILENAME
 
 
+def login_debug_path(session_dir: Path) -> Path:
+    return session_dir / LOGIN_DEBUG_FILENAME
+
+
+def login_state_path(session_dir: Path) -> Path:
+    return session_dir / LOGIN_STATE_FILENAME
+
+
+def append_login_debug(debug_log_path: Optional[Path], message: str) -> None:
+    if debug_log_path is None:
+        return
+
+    try:
+        debug_log_path.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with debug_log_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"[{timestamp}] {message}\n")
+    except OSError:
+        pass
+
+
+def save_login_state(session_dir: Path, phase: str) -> None:
+    session_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "in_progress": True,
+        "phase": phase,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    login_state_path(session_dir).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def load_login_state(session_dir: Path) -> dict[str, str]:
+    path = login_state_path(session_dir)
+    if not path.exists():
+        return {}
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    return payload if isinstance(payload, dict) else {}
+
+
+def clear_login_state(session_dir: Path) -> None:
+    path = login_state_path(session_dir)
+    if not path.exists():
+        return
+    try:
+        path.unlink()
+    except OSError:
+        pass
+
+
 def load_session_info(session_dir: Path) -> dict[str, str]:
     info_path = session_info_path(session_dir)
     if not info_path.exists():
@@ -253,6 +345,42 @@ def session_has_browser_state(session_dir: Path) -> bool:
     return False
 
 
+def session_has_authenticated_instagram_cookies(session_dir: Path) -> bool:
+    cookie_paths = (
+        session_dir / "Default" / "Cookies",
+        session_dir / "Default" / "Network" / "Cookies",
+    )
+    for cookie_path in cookie_paths:
+        if not cookie_path.exists():
+            continue
+
+        with tempfile.NamedTemporaryFile(suffix=".sqlite3") as temp_copy:
+            try:
+                shutil.copy2(cookie_path, temp_copy.name)
+                connection = sqlite3.connect(f"file:{temp_copy.name}?mode=ro", uri=True)
+            except (OSError, sqlite3.Error):
+                continue
+
+            try:
+                rows = connection.execute(
+                    """
+                    select name
+                    from cookies
+                    where host_key like '%instagram.com'
+                    """
+                ).fetchall()
+            except sqlite3.Error:
+                connection.close()
+                continue
+
+            connection.close()
+            names = {row[0] for row in rows if row and row[0]}
+            if "sessionid" in names and "ds_user_id" in names:
+                return True
+
+    return False
+
+
 def clear_live_session(session_dir: Path) -> None:
     if not session_dir.exists():
         return
@@ -289,8 +417,15 @@ def text_suggests_login_required(text: Optional[str]) -> bool:
     return any(marker in normalized for marker in LOGIN_TEXT_MARKERS)
 
 
+def url_suggests_login_flow(url: Optional[str]) -> bool:
+    if not url:
+        return False
+    normalized = url.lower()
+    return any(marker in normalized for marker in LOGIN_URL_MARKERS)
+
+
 def looks_logged_out(page) -> bool:
-    if "/accounts/login" in page.url:
+    if url_suggests_login_flow(getattr(page, "url", "")):
         return True
 
     state = page.evaluate(
@@ -299,7 +434,10 @@ def looks_logged_out(page) -> bool:
           const bodyText = (document.body?.innerText || '').toLowerCase();
           return {
             usernameInput: Boolean(document.querySelector("input[name='username']")),
+            emailInput: Boolean(document.querySelector("input[name='email']")),
             passwordInput: Boolean(document.querySelector("input[name='password']")),
+            passInput: Boolean(document.querySelector("input[name='pass']")),
+            genericPasswordInput: Boolean(document.querySelector("input[type='password']")),
             loginButton: Array.from(document.querySelectorAll('button, a'))
               .some((node) => /log in|login|continue as/i.test(node.textContent || '')),
             bodyText,
@@ -310,10 +448,92 @@ def looks_logged_out(page) -> bool:
 
     return bool(
         state.get("usernameInput")
+        or state.get("emailInput")
         or state.get("passwordInput")
+        or state.get("passInput")
+        or state.get("genericPasswordInput")
         or state.get("loginButton")
         or text_suggests_login_required(state.get("bodyText"))
     )
+
+
+def has_authenticated_instagram_shell(page) -> bool:
+    state = page.evaluate(
+        """
+        (payload) => {
+          const knownHrefs = Array.isArray(payload?.knownHrefs) ? payload.knownHrefs : [];
+          const knownLabels = Array.isArray(payload?.knownLabels) ? payload.knownLabels : [];
+          const isVisible = (node) => {
+            if (!(node instanceof Element)) return false;
+            const style = window.getComputedStyle(node);
+            if (style.visibility === 'hidden' || style.display === 'none') return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          };
+          const anchors = Array.from(document.querySelectorAll('a[href]'));
+          const visibleAnchors = anchors.filter((anchor) => isVisible(anchor));
+          const hrefs = visibleAnchors.map((anchor) => anchor.getAttribute('href') || anchor.href || '');
+          const labels = visibleAnchors
+            .map((anchor) => (anchor.innerText || anchor.textContent || '').trim().toLowerCase())
+            .filter(Boolean);
+          const bodyText = (document.body?.innerText || '').toLowerCase();
+          return {
+            hasKnownAppHref: knownHrefs.some((href) => hrefs.includes(href)),
+            hasProfileNav: visibleAnchors.some((anchor) => {
+              const href = anchor.getAttribute('href') || anchor.href || '';
+              const text = (anchor.innerText || anchor.textContent || '').trim().toLowerCase();
+              return /^\\/[A-Za-z0-9._]+\\/$/.test(href) && /profile|профиль|perfil|profil|profilo/.test(text);
+            }),
+            visibleLabelCount: knownLabels.filter((label) => labels.includes(label)).length,
+            bodyText,
+          };
+        }
+        """,
+        {
+            "knownHrefs": list(AUTHENTICATED_SHELL_HREFS),
+            "knownLabels": list(AUTHENTICATED_SHELL_LABELS),
+        },
+    )
+    if not isinstance(state, dict):
+        return False
+
+    return bool(
+        (state.get("hasKnownAppHref") and int(state.get("visibleLabelCount") or 0) >= 2)
+        or state.get("hasProfileNav")
+    )
+
+
+def confirm_authenticated_session_in_fresh_page(context, *, verbose: bool = False) -> bool:
+    try:
+        probe_page = context.new_page()
+    except Exception:
+        return False
+
+    try:
+        probe_page.set_default_navigation_timeout(15000)
+        probe_page.set_default_timeout(15000)
+        try:
+            probe_page.goto("https://www.instagram.com/accounts/edit/", wait_until="domcontentloaded")
+        except Exception:
+            return False
+
+        dismiss_known_dialogs(probe_page, verbose=verbose)
+        settle_instagram_account_page(probe_page)
+        if looks_logged_out(probe_page):
+            return False
+
+        if not has_authenticated_instagram_cookies(context):
+            return False
+
+        resolved_username = infer_authenticated_username(probe_page)
+        if resolved_username:
+            return True
+        return False
+    finally:
+        try:
+            probe_page.close()
+        except Exception:
+            pass
 
 
 def dismiss_known_dialogs(page, *, verbose: bool = False) -> bool:
@@ -339,24 +559,262 @@ def dismiss_known_dialogs(page, *, verbose: bool = False) -> bool:
     return bool(clicked_label)
 
 
+def has_authenticated_instagram_cookies(context) -> bool:
+    try:
+        cookies = context.cookies("https://www.instagram.com")
+    except Exception:
+        return False
+
+    names = {
+        cookie.get("name", "")
+        for cookie in cookies
+        if isinstance(cookie, dict)
+    }
+    return "sessionid" in names and "ds_user_id" in names
+
+
+def extract_username_from_instagram_api_payload(payload) -> Optional[str]:
+    if not isinstance(payload, dict):
+        return None
+
+    candidates = (
+        payload.get("username"),
+        payload.get("form_data", {}).get("username") if isinstance(payload.get("form_data"), dict) else None,
+        payload.get("user", {}).get("username") if isinstance(payload.get("user"), dict) else None,
+        payload.get("viewer", {}).get("username") if isinstance(payload.get("viewer"), dict) else None,
+        payload.get("graphql", {}).get("user", {}).get("username")
+        if isinstance(payload.get("graphql"), dict) and isinstance(payload.get("graphql").get("user"), dict)
+        else None,
+    )
+    for candidate in candidates:
+        resolved = normalize_username(candidate)
+        if resolved and resolved not in RESERVED_PATH_SEGMENTS:
+            return resolved
+    return None
+
+
+def fetch_logged_in_username_from_instagram_api(page) -> Optional[str]:
+    script = """
+    async () => {
+      const paths = [
+        "/api/v1/accounts/edit/web_form_data/",
+        "/api/v1/accounts/current_user/?edit=true",
+        "/accounts/edit/?__a=1&__d=dis",
+      ];
+
+      for (const path of paths) {
+        try {
+          const response = await fetch(path, {
+            credentials: "include",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "Accept": "application/json, text/plain, */*",
+            },
+          });
+          if (!response.ok) continue;
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (error) {
+            const start = text.indexOf("{");
+            const end = text.lastIndexOf("}");
+            if (start >= 0 && end > start) {
+              try {
+                return JSON.parse(text.slice(start, end + 1));
+              } catch (nestedError) {
+              }
+            }
+          }
+        } catch (error) {
+        }
+      }
+
+      return null;
+    }
+    """
+    try:
+        payload = page.evaluate(script)
+    except Exception:
+        return None
+    return extract_username_from_instagram_api_payload(payload)
+
+
+def settle_instagram_account_page(page) -> None:
+    try:
+        page.wait_for_load_state("networkidle", timeout=5000)
+    except Exception:
+        pass
+    page.wait_for_timeout(2500)
+
+
+def infer_username_from_profile_navigation(page) -> Optional[str]:
+    candidates = page.evaluate(
+        """
+        (profileLabels) => {
+          const normalizedLabels = profileLabels.map((label) => String(label || '').toLowerCase());
+          const anchors = Array.from(document.querySelectorAll('nav a[href], header a[href], a[href]'));
+          return anchors.map((anchor) => {
+            const href = anchor.getAttribute('href') || anchor.href || '';
+            const text = (anchor.innerText || anchor.textContent || '').trim().toLowerCase();
+            const aria = (anchor.getAttribute('aria-label') || '').trim().toLowerCase();
+            const title = (anchor.getAttribute('title') || '').trim().toLowerCase();
+            const label = [text, aria, title].filter(Boolean).join(' ');
+            return {
+              href,
+              priority: normalizedLabels.some((value) => label === value || label.includes(value)) ? 2 : 0,
+              inNav: Boolean(anchor.closest('nav, header')) ? 1 : 0,
+            };
+          });
+        }
+        """,
+        list(PROFILE_LABEL_MARKERS),
+    )
+    if not isinstance(candidates, list):
+        return None
+
+    scored: list[tuple[int, str]] = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        href = candidate.get("href")
+        resolved = normalize_username(href)
+        if not resolved or resolved in RESERVED_PATH_SEGMENTS:
+            continue
+        priority = int(candidate.get("priority") or 0) * 10 + int(candidate.get("inNav") or 0)
+        scored.append((priority, resolved))
+
+    if not scored:
+        return None
+
+    scored.sort(reverse=True)
+    best_priority = scored[0][0]
+    best_usernames = [username for priority, username in scored if priority == best_priority]
+    if len(best_usernames) == 1:
+        return best_usernames[0]
+
+    return infer_username_from_candidates(best_usernames)
+
+
+def infer_username_from_explicit_profile_inputs(page, timeout_error=None) -> Optional[str]:
+    for selector in USERNAME_INPUT_SELECTORS:
+        locator = page.locator(selector).first
+        try:
+            if timeout_error is not None:
+                locator.wait_for(state="visible", timeout=2500)
+        except timeout_error:
+            continue
+
+        try:
+            resolved = normalize_username(locator.input_value())
+        except Exception:
+            resolved = None
+        if resolved:
+            return resolved
+
+    dom_candidates = page.evaluate(
+        """
+        (selectors) => {
+          const values = [];
+          const push = (value) => {
+            if (typeof value === "string" && value.trim()) {
+              values.push(value.trim());
+            }
+          };
+
+          selectors.forEach((selector) => {
+            document.querySelectorAll(selector).forEach((node) => {
+              push(node.value || node.getAttribute("value") || "");
+            });
+          });
+
+          return values;
+        }
+        """,
+        list(USERNAME_INPUT_SELECTORS),
+    )
+    if not isinstance(dom_candidates, list):
+        return None
+    return infer_username_from_candidates(dom_candidates)
+
+
+def infer_authenticated_username(page, timeout_error=None) -> Optional[str]:
+    resolved = fetch_logged_in_username_from_instagram_api(page)
+    if resolved:
+        return resolved
+
+    resolved = infer_username_from_explicit_profile_inputs(page, timeout_error=timeout_error)
+    if resolved:
+        return resolved
+
+    if has_authenticated_instagram_shell(page):
+        return infer_username_from_profile_navigation(page)
+
+    return None
+
+
+def current_page_confirms_authenticated_shell(page) -> bool:
+    if url_suggests_login_flow(getattr(page, "url", "")):
+        return False
+
+    if has_authenticated_instagram_shell(page):
+        return True
+
+    return bool(infer_authenticated_username(page))
+
+
 def wait_for_login_in_browser(
     page,
     *,
     login_timeout_ms: int,
     verbose: bool = False,
+    debug_log_path: Optional[Path] = None,
 ) -> None:
     deadline = time.monotonic() + login_timeout_ms / 1000
     logged_in_rounds = 0
+    append_login_debug(debug_log_path, f"login loop started on {getattr(page, 'url', '') or 'about:blank'}")
     while time.monotonic() < deadline:
-        dismiss_known_dialogs(page, verbose=verbose)
-        if not looks_logged_out(page):
+        try:
+            dismiss_known_dialogs(page, verbose=verbose)
+            logged_out = looks_logged_out(page)
+            has_cookies = has_authenticated_instagram_cookies(page.context)
+            current_shell_ready = current_page_confirms_authenticated_shell(page)
+            fresh_probe_ready = False
+        except Exception as exc:
+            logged_in_rounds = 0
+            append_login_debug(
+                debug_log_path,
+                f"transient login-loop error on {getattr(page, 'url', '') or 'about:blank'}: {type(exc).__name__}: {exc}",
+            )
+            page.wait_for_timeout(1000)
+            continue
+
+        append_login_debug(
+            debug_log_path,
+            "login-loop state "
+            f"url={getattr(page, 'url', '') or 'about:blank'} "
+            f"logged_out={logged_out} "
+            f"has_cookies={has_cookies} "
+            f"current_shell_ready={current_shell_ready} "
+            f"fresh_probe_ready={fresh_probe_ready} "
+            f"rounds={logged_in_rounds}",
+        )
+
+        if has_cookies:
             logged_in_rounds += 1
-            if logged_in_rounds >= 4:
+            if logged_in_rounds >= 3:
+                append_login_debug(
+                    debug_log_path,
+                    f"login loop confirmed authenticated session on {getattr(page, 'url', '') or 'about:blank'}",
+                )
                 return
         else:
             logged_in_rounds = 0
         page.wait_for_timeout(1000)
 
+    append_login_debug(
+        debug_log_path,
+        f"login loop timed out on {getattr(page, 'url', '') or 'about:blank'}",
+    )
     raise LiveModeError(
         "Instagram session is still not authenticated. Finish the login in the opened browser and try again."
     )
@@ -369,9 +827,10 @@ def wait_for_confirmed_login(
     *,
     login_timeout_ms: int,
     verbose: bool = False,
-) -> str:
+) -> Optional[str]:
     deadline = time.monotonic() + login_timeout_ms / 1000
     last_error = "Instagram login could not be confirmed yet."
+    saw_authenticated_session = False
 
     while time.monotonic() < deadline:
         dismiss_known_dialogs(page, verbose=verbose)
@@ -379,12 +838,30 @@ def wait_for_confirmed_login(
             page.wait_for_timeout(1000)
             continue
 
+        if not has_authenticated_instagram_cookies(page.context):
+            last_error = "Instagram login was accepted visually, but the authenticated session cookies are not ready yet."
+            page.wait_for_timeout(1000)
+            continue
+
+        saw_authenticated_session = True
+        settle_instagram_account_page(page)
         if requested_username:
             return requested_username
 
-        resolved_username = infer_username_from_current_page(page)
+        resolved_username = infer_authenticated_username(page)
         if resolved_username:
             return resolved_username
+
+        try:
+            page.goto("https://www.instagram.com/", wait_until="domcontentloaded")
+            dismiss_known_dialogs(page, verbose=verbose)
+            if not looks_logged_out(page):
+                settle_instagram_account_page(page)
+                resolved_username = infer_authenticated_username(page)
+                if resolved_username:
+                    return resolved_username
+        except Exception:
+            page.wait_for_timeout(1000)
 
         try:
             page.goto("https://www.instagram.com/accounts/edit/", wait_until="domcontentloaded")
@@ -409,6 +886,9 @@ def wait_for_confirmed_login(
         last_error = "Instagram login succeeded, but the account username could not be confirmed yet."
         page.wait_for_timeout(1000)
 
+    if saw_authenticated_session:
+        return requested_username
+
     raise LiveModeError(last_error)
 
 
@@ -419,6 +899,7 @@ def complete_manual_login(
     terminal_prompt: bool,
     login_timeout_ms: int,
     verbose: bool = False,
+    debug_log_path: Optional[Path] = None,
 ) -> None:
     print("Instagram browser opened in live mode.")
     if terminal_prompt:
@@ -438,6 +919,7 @@ def complete_manual_login(
         page,
         login_timeout_ms=login_timeout_ms,
         verbose=verbose,
+        debug_log_path=debug_log_path,
     )
 
 
@@ -448,6 +930,7 @@ def ensure_logged_in(
     terminal_prompt: bool,
     login_timeout_ms: int,
     verbose: bool,
+    debug_log_path: Optional[Path] = None,
 ) -> None:
     page.goto(target_url, wait_until="domcontentloaded")
     if looks_logged_out(page):
@@ -457,6 +940,7 @@ def ensure_logged_in(
             terminal_prompt=terminal_prompt,
             login_timeout_ms=login_timeout_ms,
             verbose=verbose,
+            debug_log_path=debug_log_path,
         )
         if looks_logged_out(page):
             raise LiveModeError(
@@ -469,34 +953,33 @@ def detect_logged_in_username(page, timeout_error, *, verbose: bool = False) -> 
     dismiss_known_dialogs(page, verbose=verbose)
     if looks_logged_out(page):
         return None
+    settle_instagram_account_page(page)
 
-    return infer_username_from_current_page(page, timeout_error=timeout_error)
+    resolved = fetch_logged_in_username_from_instagram_api(page)
+    if resolved:
+        return resolved
+
+    return infer_authenticated_username(page, timeout_error=timeout_error)
 
 
 def infer_username_from_current_page(page, timeout_error=None) -> Optional[str]:
+    resolved = fetch_logged_in_username_from_instagram_api(page)
+    if resolved:
+        return resolved
+
+    resolved = infer_username_from_explicit_profile_inputs(page, timeout_error=timeout_error)
+    if resolved:
+        return resolved
+
+    resolved = infer_username_from_profile_navigation(page)
+    if resolved:
+        return resolved
+
     # Instagram changes the edit-profile form markup frequently, so we try
     # several sources before giving up on auto-detection.
-    direct_selectors = (
-        "input[name='username']",
-        "input[autocomplete='username']",
-        "input[aria-label='Username']",
-        "input[aria-label='Имя пользователя']",
-    )
-    for selector in direct_selectors:
-        locator = page.locator(selector).first
-        try:
-            if timeout_error is not None:
-                locator.wait_for(state="visible", timeout=2500)
-        except timeout_error:
-            continue
-
-        resolved = normalize_username(locator.input_value())
-        if resolved:
-            return resolved
-
     dom_candidates = page.evaluate(
         """
-        () => {
+        (selectors) => {
           const values = [];
           const push = (value) => {
             if (typeof value === "string" && value.trim()) {
@@ -504,12 +987,7 @@ def infer_username_from_current_page(page, timeout_error=None) -> Optional[str]:
             }
           };
 
-          [
-            "input[name='username']",
-            "input[autocomplete='username']",
-            "input[aria-label='Username']",
-            "input[aria-label='Имя пользователя']",
-          ].forEach((selector) => {
+          selectors.forEach((selector) => {
             document.querySelectorAll(selector).forEach((node) => {
               push(node.value || node.getAttribute("value") || "");
             });
@@ -525,7 +1003,8 @@ def infer_username_from_current_page(page, timeout_error=None) -> Optional[str]:
 
           return values;
         }
-        """
+        """,
+        list(USERNAME_INPUT_SELECTORS),
     )
     resolved = infer_username_from_candidates(dom_candidates)
     if resolved:
@@ -651,6 +1130,54 @@ def capture_profile_avatar_data_url(page, username: str, *, verbose: bool = Fals
     if not avatar_url:
         return None
     return download_image_as_data_url(avatar_url)
+
+
+def resolve_saved_session_identity(
+    session_dir: Path,
+    *,
+    verbose: bool = False,
+) -> tuple[Optional[str], Optional[str]]:
+    existing_username = load_session_username(session_dir)
+    existing_avatar = load_session_avatar_data_url(session_dir)
+    if existing_username and existing_avatar:
+        return existing_username, existing_avatar
+
+    if not session_has_browser_state(session_dir):
+        return existing_username, existing_avatar
+
+    sync_playwright, timeout_error = require_playwright()
+    with sync_playwright() as playwright:
+        context = playwright.chromium.launch_persistent_context(
+            str(session_dir),
+            headless=True,
+            viewport={"width": 1440, "height": 1100},
+        )
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+            page.set_default_navigation_timeout(8000)
+            page.set_default_timeout(8000)
+            resolved_username = detect_logged_in_username(
+                page,
+                timeout_error,
+                verbose=verbose,
+            )
+            if not resolved_username:
+                return existing_username, existing_avatar
+            avatar_data_url = capture_profile_avatar_data_url(
+                page,
+                resolved_username,
+                verbose=verbose,
+            )
+            save_session_profile(
+                session_dir,
+                username=resolved_username,
+                avatar_data_url=avatar_data_url,
+            )
+            return resolved_username, avatar_data_url or existing_avatar
+        except Exception:
+            return existing_username, existing_avatar
+        finally:
+            context.close()
 
 
 def open_relation_dialog(
@@ -895,6 +1422,7 @@ def analyze_live_session(
 ) -> tuple[str, AnalysisResult]:
     sync_playwright, timeout_error = require_playwright()
     session_dir.mkdir(parents=True, exist_ok=True)
+    debug_log = login_debug_path(session_dir)
     emit_progress(progress_callback, "boot", "Launching the live Instagram browser.", 4)
 
     with sync_playwright() as playwright:
@@ -913,6 +1441,7 @@ def analyze_live_session(
                 terminal_prompt=terminal_prompt,
                 login_timeout_ms=login_timeout_ms,
                 verbose=verbose,
+                debug_log_path=debug_log,
             )
             emit_progress(progress_callback, "auth", "Instagram session is ready.", 20)
 
@@ -986,45 +1515,51 @@ def login_only(
 ) -> Optional[str]:
     sync_playwright, timeout_error = require_playwright()
     session_dir.mkdir(parents=True, exist_ok=True)
+    debug_log = login_debug_path(session_dir)
+    append_login_debug(debug_log, "starting login_only flow")
+    save_login_state(session_dir, "browser")
+    resolved_username = username
+    avatar_data_url = None
 
-    with sync_playwright() as playwright:
-        context = playwright.chromium.launch_persistent_context(
-            str(session_dir),
-            headless=headless,
-            viewport={"width": 1440, "height": 1100},
-        )
-        try:
-            page = context.pages[0] if context.pages else context.new_page()
-            ensure_logged_in(
-                page,
-                "https://www.instagram.com/",
-                terminal_prompt=terminal_prompt,
-                login_timeout_ms=login_timeout_ms,
-                verbose=verbose,
+    try:
+        with sync_playwright() as playwright:
+            context = playwright.chromium.launch_persistent_context(
+                str(session_dir),
+                headless=headless,
+                viewport={"width": 1440, "height": 1100},
             )
-            resolved_username = wait_for_confirmed_login(
-                page,
-                username,
-                timeout_error,
-                login_timeout_ms=login_timeout_ms,
-                verbose=verbose,
-            )
-            avatar_data_url = None
-            if resolved_username:
-                avatar_data_url = capture_profile_avatar_data_url(
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                ensure_logged_in(
                     page,
-                    resolved_username,
+                    "https://www.instagram.com/",
+                    terminal_prompt=terminal_prompt,
+                    login_timeout_ms=login_timeout_ms,
                     verbose=verbose,
+                    debug_log_path=debug_log,
                 )
-                save_session_profile(
-                    session_dir,
-                    username=resolved_username,
-                    avatar_data_url=avatar_data_url,
-                )
-        finally:
-            context.close()
+                append_login_debug(debug_log, "visible login confirmed; closing browser to persist the local session")
+            finally:
+                context.close()
 
-    return resolved_username
+        save_login_state(session_dir, "identity")
+        append_login_debug(debug_log, "resolving saved session identity after visible login")
+        detected_username, detected_avatar = resolve_saved_session_identity(
+            session_dir,
+            verbose=verbose,
+        )
+        resolved_username = detected_username or resolved_username
+        avatar_data_url = detected_avatar
+        if resolved_username or avatar_data_url:
+            save_session_profile(
+                session_dir,
+                username=resolved_username,
+                avatar_data_url=avatar_data_url,
+            )
+        append_login_debug(debug_log, f"login_only finished with username={resolved_username or 'none'}")
+        return resolved_username
+    finally:
+        clear_login_state(session_dir)
 
 
 def print_live_metadata(session_dir: Path, username: str) -> None:

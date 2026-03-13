@@ -61,10 +61,26 @@ fn connect_instagram(app: tauri::AppHandle, username: Option<String>) -> Result<
 }
 
 #[tauri::command]
+fn resolve_session_identity(app: tauri::AppHandle) -> Result<Value, String> {
+    run_bridge_json_command(&app, "resolve-identity", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+    })
+}
+
+#[tauri::command]
 fn disconnect_instagram(app: tauri::AppHandle) -> Result<Value, String> {
     run_bridge_json_command(&app, "disconnect", |command, invocation| {
         command.arg("--session-dir").arg(&invocation.session_dir);
     })
+}
+
+#[tauri::command]
+fn cleanup_instagram_login_processes(app: tauri::AppHandle) -> Result<Value, String> {
+    let invocation = resolve_bridge_invocation(&app)?;
+    cleanup_login_processes_for_session(&invocation.session_dir)?;
+    Ok(serde_json::json!({
+        "cleaned": true
+    }))
 }
 
 #[tauri::command]
@@ -79,7 +95,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_session_status,
             connect_instagram,
+            resolve_session_identity,
             disconnect_instagram,
+            cleanup_instagram_login_processes,
             run_live_scan,
         ])
         .run(tauri::generate_context!())
@@ -301,6 +319,35 @@ fn resolve_bridge_invocation(app: &tauri::AppHandle) -> Result<BridgeInvocation,
         session_dir,
         browsers_path: None,
     })
+}
+
+fn cleanup_login_processes_for_session(session_dir: &Path) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        let session_dir = session_dir.display().to_string();
+        let patterns = [
+            format!("instagram_followback_desktop_bridge.py login --session-dir {session_dir}"),
+            format!("Google Chrome for Testing.*--user-data-dir={session_dir}"),
+            format!("chrome-headless-shell.*--user-data-dir={session_dir}"),
+        ];
+
+        for pattern in patterns {
+            let status = Command::new("pkill")
+                .arg("-f")
+                .arg(&pattern)
+                .status()
+                .map_err(|error| format!("Failed to run pkill for lingering Instagram login processes: {error}"))?;
+
+            if !status.success() && status.code() != Some(1) {
+                return Err(format!(
+                    "Failed to clean up lingering Instagram login processes for session {}.",
+                    session_dir
+                ));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn resolve_session_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {

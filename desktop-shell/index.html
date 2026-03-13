@@ -1355,7 +1355,10 @@
         connectPollTimer: null,
         connectPollDeadline: 0,
         pendingUsername: null,
+        identityResolveInFlight: false,
       };
+
+      const CONNECT_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
       const els = {
         sessionUsername: document.getElementById("sessionUsername"),
@@ -1397,11 +1400,19 @@
         statMutuals: document.getElementById("statMutuals"),
       };
 
+      function sessionCanScan(session = state.session) {
+        return Boolean(session.connected || session.authenticated_cookie_present);
+      }
+
+      function sessionCanDisconnect(session = state.session) {
+        return Boolean(session.browser_state_present || session.authenticated_cookie_present || session.connected);
+      }
+
       function setBusy(nextBusy) {
         state.busy = nextBusy;
-        els.connectButton.disabled = nextBusy || state.session.connected;
-        els.disconnectButton.disabled = nextBusy || !state.session.connected;
-        els.scanButton.disabled = nextBusy || !state.session.connected;
+        els.connectButton.disabled = nextBusy || state.session.connected || state.session.authenticated_cookie_present;
+        els.disconnectButton.disabled = nextBusy || !sessionCanDisconnect();
+        els.scanButton.disabled = nextBusy || !sessionCanScan();
       }
 
       function stopConnectPolling() {
@@ -1411,16 +1422,51 @@
         }
         state.connectPollDeadline = 0;
         state.pendingUsername = null;
+        state.identityResolveInFlight = false;
+      }
+
+      async function resolveConnectedIdentity(session, options = {}) {
+        const { stopPollingOnSuccess = false } = options;
+        if (!session?.connected || session.username || state.identityResolveInFlight) {
+          return session;
+        }
+
+        state.identityResolveInFlight = true;
+        try {
+          setStatus("Instagram session connected. Resolving account identity and avatar.");
+          const resolvedSession = await call("resolve_session_identity");
+          renderSession(resolvedSession);
+          if (resolvedSession.connected && resolvedSession.username) {
+            if (stopPollingOnSuccess) {
+              stopConnectPolling();
+              els.connectButton.textContent = "Connect Instagram";
+              setBusy(false);
+            }
+            setStatus(`Instagram connected as @${resolvedSession.username}.`);
+          }
+          return resolvedSession;
+        } finally {
+          state.identityResolveInFlight = false;
+        }
+      }
+
+      async function cleanupLingeringLoginWindow() {
+        try {
+          await call("cleanup_instagram_login_processes");
+        } catch (error) {
+          setDebug(`cleanupLingeringLoginWindow: ${String(error)}`);
+        }
       }
 
       function startConnectPolling() {
         stopConnectPolling();
-        state.connectPollDeadline = Date.now() + 3 * 60 * 1000;
+        state.connectPollDeadline = Date.now() + CONNECT_POLL_TIMEOUT_MS;
         state.connectPollTimer = setInterval(async () => {
           try {
             const session = await call("get_session_status");
             renderSession(session);
-            if (session.connected) {
+            if (session.connected && session.username) {
+              await cleanupLingeringLoginWindow();
               stopConnectPolling();
               setStatus(session.username
                 ? `Instagram connected as @${session.username}.`
@@ -1430,9 +1476,57 @@
               return;
             }
 
+            if (session.connected && !session.username) {
+              const resolvedSession = await resolveConnectedIdentity(session, { stopPollingOnSuccess: true });
+              if (resolvedSession?.connected) {
+                await cleanupLingeringLoginWindow();
+                stopConnectPolling();
+                els.connectButton.textContent = "Connect Instagram";
+                setBusy(false);
+                if (!resolvedSession.username) {
+                  setStatus("Instagram session connected. Type your username manually or run a scan to finish account detection.");
+                }
+                return;
+              }
+            }
+
+            if (session.login_in_progress) {
+              setStatus(session.authenticated_cookie_present
+                ? "Instagram login succeeded. Finalizing the saved desktop session."
+                : "Instagram browser is open. Finish the login there to attach the local session.");
+              return;
+            }
+
+            if (session.authenticated_cookie_present && !session.username) {
+              setStatus("Instagram session is saved locally. Finishing account detection.");
+              if (!state.identityResolveInFlight) {
+                state.identityResolveInFlight = true;
+                try {
+                  const resolvedSession = await call("resolve_session_identity");
+                  renderSession(resolvedSession);
+                  if (resolvedSession.connected && resolvedSession.username) {
+                    stopConnectPolling();
+                    setStatus(`Instagram connected as @${resolvedSession.username}.`);
+                    els.connectButton.textContent = "Connect Instagram";
+                    setBusy(false);
+                    return;
+                  }
+                } finally {
+                  state.identityResolveInFlight = false;
+                }
+              }
+              stopConnectPolling();
+              setStatus("Instagram session is saved locally. Type your username manually or run a scan to finish account detection.");
+              els.connectButton.textContent = "Connect Instagram";
+              setBusy(false);
+              return;
+            }
+
             if (Date.now() > state.connectPollDeadline) {
               stopConnectPolling();
-              setStatus("Still waiting for Instagram login. Finish the browser login flow, then try Connect again if needed.");
+              setStatus(session.authenticated_cookie_present
+                ? "Instagram session is saved locally, but the account username was not confirmed in time. Type your username manually or run a scan to finish account detection."
+                : "Still waiting for Instagram login. Finish the browser login flow, then try Connect again if needed.");
               els.connectButton.textContent = "Connect Instagram";
               setBusy(false);
             }
@@ -1486,16 +1580,25 @@
         state.session = session;
         const username = session.connected
           ? (session.username ? `@${session.username}` : "Instagram session connected")
-          : "No account connected";
+          : ((session.login_in_progress || session.authenticated_cookie_present)
+            ? "Finishing account detection"
+            : "No account connected");
         els.sessionUsername.textContent = username;
         renderSessionAvatar(session);
-        els.sessionChipLabel.textContent = session.connected ? "Connected" : "Disconnected";
-        els.sessionPillLabel.textContent = session.connected ? "Connected" : "Disconnected";
+        const inDetection = Boolean((session.login_in_progress || session.authenticated_cookie_present) && !session.connected);
+        els.sessionChipLabel.textContent = session.connected ? "Connected" : (inDetection ? "Waiting" : "Disconnected");
+        els.sessionPillLabel.textContent = session.connected ? "Connected" : (inDetection ? "Waiting" : "Disconnected");
         els.sessionDescription.textContent = session.connected
           ? (session.username
             ? "Your Instagram session is stored locally in the desktop app data directory and is ready for live scans."
-            : "A saved Instagram browser session is present locally and is ready for live scans. The username will be detected automatically during the scan if needed.")
-          : "Create a local Instagram session to unlock live desktop scans.";
+            : "Your Instagram session is stored locally and ready for live scans. The username will be detected automatically during the next scan.")
+          : (session.login_in_progress
+            ? (session.authenticated_cookie_present
+              ? "Instagram accepted the login. The desktop app is finalizing and saving the local session."
+              : "Instagram browser is open. Finish the login flow there and the desktop app will attach the saved session.")
+            : (inDetection
+              ? "Instagram session is saved locally. The desktop app is still confirming which account is connected."
+              : "Create a local Instagram session to unlock live desktop scans."));
         setConnectionState(Boolean(session.connected));
         if (!els.usernameInput.value && session.username) {
           els.usernameInput.value = session.username;
@@ -1672,14 +1775,23 @@
 
       async function refreshSession() {
         setDebug("refreshSession: started");
-        const session = await call("get_session_status");
+        let session = await call("get_session_status");
         renderSession(session);
+        if (session.connected && !session.username) {
+          session = await resolveConnectedIdentity(session);
+        }
         setDebug(`refreshSession: connected=${Boolean(session.connected)} username=${session.username || "none"}`);
         setStatus(session.connected
           ? (session.username
             ? `Desktop session ready for @${session.username}.`
             : "Desktop session ready. Instagram username will be detected automatically when you run a scan.")
-          : "No live desktop session yet. Connect Instagram to continue.");
+          : (session.login_in_progress
+            ? (session.authenticated_cookie_present
+              ? "Instagram login succeeded. Finalizing the saved desktop session."
+              : "Instagram browser is open. Finish the login there and return here.")
+          : (session.authenticated_cookie_present
+            ? "Instagram session is saved locally. Type your username manually or run a scan to finish account detection."
+            : "No live desktop session yet. Connect Instagram to continue.")));
       }
 
       async function handleConnect() {
@@ -1696,9 +1808,13 @@
           }
           const response = await call("connect_instagram", { username: username || null });
           setDebug(`handleConnect: invoke returned ${JSON.stringify(response)}`);
-          const immediateSession = await call("get_session_status");
+          let immediateSession = await call("get_session_status");
           renderSession(immediateSession);
+          if (immediateSession.connected && !immediateSession.username) {
+            immediateSession = await resolveConnectedIdentity(immediateSession);
+          }
           if (immediateSession.connected) {
+            await cleanupLingeringLoginWindow();
             stopConnectPolling();
             els.connectButton.textContent = "Connect Instagram";
             setBusy(false);
@@ -1739,6 +1855,8 @@
           els.resultsTitle.textContent = "Ready for a live scan";
           els.resultsSubtitle.textContent = "Connect Instagram from the left rail, then run a scan to populate the desktop workspace with current relationship data.";
           els.searchInput.value = "";
+          els.usernameInput.value = "";
+          state.session = { connected: false, username: null };
           setStatus("The saved Instagram desktop session was removed.");
         } catch (error) {
           setStatus(String(error));
@@ -1749,12 +1867,17 @@
 
       async function handleScan() {
         try {
+          const effectiveUsername = els.usernameInput.value.trim() || state.session.username || null;
+          if (!effectiveUsername && !state.session.authenticated_cookie_present) {
+            setStatus("Connect Instagram first, or type your username manually before running a scan.");
+            return;
+          }
           setBusy(true);
           setProgress(4, "Launching the desktop live scan.");
           setStatus("Background scan started. The browser window will stay hidden unless Instagram needs a fresh visible login.");
           const payload = {
             request: {
-              username: els.usernameInput.value.trim() || null,
+              username: effectiveUsername,
               mode: els.modeSelect.value,
               sortMode: els.sortSelect.value,
               limit: els.limitInput.value ? Number(els.limitInput.value) : null,
@@ -1765,7 +1888,15 @@
           const report = await call("run_live_scan", payload);
           renderReport(report);
           const session = await call("get_session_status");
+          if (!session.username && report.scan_username) {
+            session.username = report.scan_username;
+            session.connected = true;
+            session.authenticated_cookie_present = true;
+          }
           renderSession(session);
+          if (!els.usernameInput.value && report.scan_username) {
+            els.usernameInput.value = report.scan_username;
+          }
           setStatus(`Live scan completed for @${report.scan_username}.`);
         } catch (error) {
           setStatus(String(error));

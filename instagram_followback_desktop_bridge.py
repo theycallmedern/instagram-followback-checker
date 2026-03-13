@@ -26,11 +26,15 @@ from instagram_followback_live import (
     LiveModeError,
     analyze_live_session,
     clear_live_session,
+    load_login_state,
     load_session_avatar_data_url,
     load_session_username,
     login_only,
+    normalize_profile_username,
     resolve_requested_username,
+    resolve_saved_session_identity,
     save_session_username,
+    session_has_authenticated_instagram_cookies,
     session_has_browser_state,
 )
 
@@ -55,11 +59,16 @@ def session_status_payload(session_dir: Path) -> dict[str, Any]:
     username = load_session_username(session_dir)
     avatar_data_url = load_session_avatar_data_url(session_dir)
     browser_state_present = session_has_browser_state(session_dir)
+    authenticated_cookie_present = session_has_authenticated_instagram_cookies(session_dir)
+    login_state = load_login_state(session_dir)
     return {
-        "connected": bool(browser_state_present),
+        "connected": bool(browser_state_present and authenticated_cookie_present),
         "username": username,
         "avatar_data_url": avatar_data_url,
         "browser_state_present": browser_state_present,
+        "authenticated_cookie_present": authenticated_cookie_present,
+        "login_in_progress": bool(login_state.get("in_progress")),
+        "login_phase": login_state.get("phase"),
         "session_dir": str(session_dir),
     }
 
@@ -123,7 +132,8 @@ def run_disconnect(args: argparse.Namespace) -> int:
 
 def run_login(args: argparse.Namespace) -> int:
     session_dir = Path(args.session_dir)
-    requested_username = resolve_requested_username(args.username, session_dir, allow_prompt=False)
+    requested_username = normalize_profile_username(args.username) if args.username else None
+    clear_live_session(session_dir)
 
     with suppress_internal_stdout():
         resolved_username = login_only(
@@ -132,6 +142,22 @@ def run_login(args: argparse.Namespace) -> int:
             headless=False,
             terminal_prompt=False,
             login_timeout_ms=args.login_timeout_ms,
+            verbose=args.verbose,
+        )
+
+    if resolved_username:
+        save_session_username(session_dir, resolved_username)
+
+    emit_json({"type": "session", "payload": session_status_payload(session_dir)})
+    return 0
+
+
+def run_resolve_identity(args: argparse.Namespace) -> int:
+    session_dir = Path(args.session_dir)
+
+    with suppress_internal_stdout():
+        resolved_username, _avatar_data_url = resolve_saved_session_identity(
+            session_dir,
             verbose=args.verbose,
         )
 
@@ -218,6 +244,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     login_parser.add_argument("--verbose", action="store_true", help="Enable verbose Playwright output.")
 
+    resolve_identity_parser = subparsers.add_parser(
+        "resolve-identity",
+        help="Try to resolve the connected Instagram account from the saved session.",
+    )
+    add_session_dir_argument(resolve_identity_parser)
+    resolve_identity_parser.add_argument("--verbose", action="store_true", help="Enable verbose Playwright output.")
+
     scan_parser = subparsers.add_parser("scan", help="Run a live scan and return report JSON.")
     add_session_dir_argument(scan_parser)
     scan_parser.add_argument("--username", help="Optional Instagram username.")
@@ -275,6 +308,7 @@ COMMANDS = {
     "session-status": run_session_status,
     "disconnect": run_disconnect,
     "login": run_login,
+    "resolve-identity": run_resolve_identity,
     "scan": run_scan,
 }
 
