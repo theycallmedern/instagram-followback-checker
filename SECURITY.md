@@ -6,7 +6,7 @@ Only the latest state of the `main` branch is treated as supported.
 
 At the moment that means:
 
-- `0.2.x` — supported
+- `0.3.x` — supported
 - older versions — unsupported
 
 ## Sensitive Data In This Project
