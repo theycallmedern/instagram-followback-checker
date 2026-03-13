@@ -7,6 +7,23 @@
   <strong>Local-first desktop app for understanding your Instagram relationship graph with a clean, modern workflow.</strong>
 </p>
 
+<p align="center">
+  <a href="https://github.com/theycallmedern/instagram-followback-checker/releases/latest">
+    <img src="https://img.shields.io/github/v/release/theycallmedern/instagram-followback-checker?style=for-the-badge&label=Release&color=3b82f6" alt="Latest release" />
+  </a>
+  <a href="https://github.com/theycallmedern/instagram-followback-checker/actions/workflows/desktop-build.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/theycallmedern/instagram-followback-checker/desktop-build.yml?branch=main&style=for-the-badge&label=Desktop%20Build&color=f97316" alt="Desktop build status" />
+  </a>
+  <a href="./SECURITY.md">
+    <img src="https://img.shields.io/badge/Security-Local--first-22c55e?style=for-the-badge" alt="Security local-first" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/github/license/theycallmedern/instagram-followback-checker?style=for-the-badge&label=License&color=64748b" alt="License MIT" />
+  </a>
+</p>
+
+---
+
 It is designed around one strong loop:
 
 - connect a real Instagram session once
