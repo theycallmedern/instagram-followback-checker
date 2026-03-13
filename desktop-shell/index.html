@@ -1,0 +1,1817 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Instagram Followback</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #11141b;
+        --bg-glow: #11141b;
+        --window: #171b23;
+        --panel: #1a1f29;
+        --panel-2: #202634;
+        --panel-3: #161a22;
+        --panel-elevated: #252d3a;
+        --border: rgba(174, 193, 229, 0.14);
+        --border-strong: rgba(174, 193, 229, 0.24);
+        --text: #f5f8ff;
+        --muted: #98a8c9;
+        --muted-strong: #c4d0e8;
+        --accent: #75e7e3;
+        --accent-strong: #65b8ff;
+        --accent-violet: #8e7dff;
+        --accent-coral: #ff8e67;
+        --accent-rose: #ff6f99;
+        --accent-gold: #ffc56b;
+        --success: #7ef1b9;
+        --danger: #ff8691;
+        --warning: #ffd091;
+        --shadow: 0 28px 70px rgba(0, 0, 0, 0.46);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      body {
+        min-height: 100vh;
+        padding: 12px;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .desktop-window {
+        height: calc(100vh - 24px);
+        min-height: 760px;
+        border-radius: 22px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
+          var(--window);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .window-bar {
+        height: 54px;
+        padding: 0 18px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 18px;
+        border-bottom: 1px solid var(--border);
+        background:
+          linear-gradient(90deg, rgba(101, 184, 255, 0.08), rgba(255, 142, 103, 0.04) 42%, rgba(117, 231, 227, 0.06)),
+          rgba(12, 16, 24, 0.92);
+        backdrop-filter: blur(16px);
+      }
+
+      .window-left,
+      .window-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .window-right {
+        justify-content: flex-end;
+      }
+
+      .app-meta {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .app-meta strong {
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+
+      .app-meta span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .window-center {
+        justify-self: center;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.13), rgba(117, 231, 227, 0.07)),
+          rgba(20, 28, 42, 0.86);
+      }
+
+      .window-center svg {
+        width: 16px;
+        height: 16px;
+        color: var(--accent);
+      }
+
+      .window-center span {
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .status-chip,
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 999px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.09), rgba(117, 231, 227, 0.04)),
+          rgba(17, 25, 38, 0.9);
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-chip[data-state="connected"],
+      .status-pill[data-state="connected"] {
+        color: #b2ffe0;
+        border-color: rgba(118, 241, 185, 0.24);
+        background:
+          linear-gradient(90deg, rgba(28, 96, 74, 0.78), rgba(26, 78, 67, 0.52)),
+          rgba(20, 52, 42, 0.58);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(177, 193, 222, 0.7);
+        box-shadow: 0 0 0 4px rgba(177, 193, 222, 0.08);
+      }
+
+      .status-chip[data-state="connected"] .status-dot,
+      .status-pill[data-state="connected"] .status-dot {
+        background: var(--success);
+        box-shadow: 0 0 0 4px rgba(126, 241, 185, 0.12);
+      }
+
+      .app-shell {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        min-height: 0;
+        overflow: auto;
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        border-right: 1px solid var(--border);
+        background:
+          linear-gradient(180deg, rgba(101, 184, 255, 0.045), rgba(255, 255, 255, 0)),
+          var(--panel-3);
+      }
+
+      .workspace {
+        min-height: 0;
+        overflow: auto;
+        padding: 18px;
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+
+      .nav-card,
+      .card,
+      .workspace-card,
+      .metric-card,
+      .table-card,
+      .inspector-card {
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top left, rgba(101, 184, 255, 0.08), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+          var(--panel);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      }
+
+      .nav-card,
+      .card {
+        padding: 16px;
+        display: grid;
+        align-content: start;
+        gap: 14px;
+      }
+
+      .workspace-card,
+      .table-card,
+      .inspector-card {
+        padding: 18px;
+      }
+
+      .sidebar-kicker,
+      .panel-kicker {
+        display: block;
+        margin: 0;
+        color: #96c0ff;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .workspace-card .panel-kicker {
+        color: var(--accent);
+      }
+
+      .table-card .panel-kicker {
+        color: var(--accent-strong);
+      }
+
+      .inspector-card .panel-kicker {
+        color: #ffab8b;
+      }
+
+      .nav-card {
+        gap: 14px;
+      }
+
+      .nav-title {
+        font-size: 18px;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+      }
+
+      .nav-copy {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .identity-row {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
+      }
+
+      .identity-mark,
+      .title-mark {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: transparent;
+        border: 0;
+      }
+
+      .title-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+      }
+
+      .identity-mark {
+        border-radius: 999px;
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.18), rgba(255, 142, 103, 0.14)),
+          rgba(17, 24, 36, 0.94);
+        border: 1px solid rgba(174, 193, 229, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .brand-icon {
+        display: block;
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
+        filter: drop-shadow(0 16px 30px rgba(255, 129, 94, 0.12));
+      }
+
+      .title-mark .brand-icon {
+        width: 38px;
+        height: 38px;
+      }
+
+      .session-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        object-fit: cover;
+        background: rgba(10, 14, 21, 0.92);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+      }
+
+      .identity-copy {
+        min-width: 0;
+      }
+
+      .identity-copy small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .identity-copy strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 22px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .identity-status {
+        display: grid;
+        gap: 10px;
+      }
+
+      #sessionDescription {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .field-stack,
+      .field-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .field-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field-grid.scan-grid {
+        grid-template-columns: minmax(0, 1.45fr) minmax(118px, 0.85fr);
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label,
+      .field-title {
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        width: 100%;
+        height: 46px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(180deg, rgba(101, 184, 255, 0.07), rgba(255, 255, 255, 0)),
+          var(--panel-elevated);
+        color: var(--text);
+        padding: 0 14px;
+        outline: none;
+        font-size: 17px;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+      }
+
+      select {
+        padding-right: 42px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      input::placeholder {
+        color: #8190ae;
+      }
+
+      input:focus,
+      select:focus {
+        border-color: rgba(116, 230, 218, 0.42);
+        box-shadow: 0 0 0 4px rgba(116, 230, 218, 0.08);
+      }
+
+      .toggle-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .toggle-row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.06), rgba(142, 125, 255, 0.03)),
+          rgba(22, 31, 46, 0.82);
+      }
+
+      .toggle-row input {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 38px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid var(--border-strong);
+        background: rgba(87, 105, 139, 0.34);
+        position: relative;
+        cursor: pointer;
+        transition: background 140ms ease, border-color 140ms ease;
+      }
+
+      .toggle-row input::before {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: white;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+        transition: transform 140ms ease;
+      }
+
+      .toggle-row input:checked {
+        background: rgba(116, 230, 218, 0.45);
+        border-color: rgba(116, 230, 218, 0.36);
+      }
+
+      .toggle-row input:checked::before {
+        transform: translateX(16px);
+      }
+
+      .toggle-copy {
+        display: grid;
+        gap: 3px;
+      }
+
+      .toggle-copy strong {
+        font-size: 14px;
+      }
+
+      .toggle-copy span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .button-stack,
+      .button-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .button-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: stretch;
+      }
+
+      button {
+        height: 46px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(101, 184, 255, 0.08), rgba(255, 255, 255, 0)),
+          var(--panel-elevated);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, opacity 140ms ease;
+      }
+
+      button:hover:enabled {
+        transform: translateY(-1px);
+        border-color: rgba(177, 193, 222, 0.26);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .button-primary {
+        border-color: rgba(117, 231, 227, 0.26);
+        background: linear-gradient(135deg, #7ee6dc, #67c1ff 58%, #7c8eff);
+        color: #081018;
+        box-shadow: 0 16px 32px rgba(83, 199, 255, 0.18);
+      }
+
+      .button-danger {
+        color: #ffd9dd;
+        border-color: rgba(255, 134, 145, 0.22);
+        background: linear-gradient(135deg, rgba(84, 28, 40, 0.96), rgba(54, 27, 30, 0.96));
+      }
+
+      .progress-shell {
+        display: grid;
+        gap: 8px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(117, 231, 227, 0.08), rgba(101, 184, 255, 0.06)),
+          rgba(24, 31, 43, 0.78);
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(177, 193, 222, 0.16);
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #75e7e3, #65b8ff 58%, #8e7dff);
+        transition: width 180ms ease;
+      }
+
+      #progressText,
+      #statusText {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      #statusText {
+        min-height: 0;
+        font-size: 13px;
+      }
+
+      #debugText {
+        min-height: 0;
+        color: #7f90b0;
+        font-size: 12px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+
+      .action-feedback {
+        display: grid;
+        gap: 10px;
+        align-content: start;
+      }
+
+      .workspace-card {
+        display: grid;
+        gap: 14px;
+      }
+
+      .workspace-card h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.02;
+        letter-spacing: -0.05em;
+      }
+
+      .workspace-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      #reportMeta:empty {
+        display: none;
+      }
+
+      #reportMeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.08), rgba(117, 231, 227, 0.04)),
+          rgba(23, 34, 51, 0.84);
+        color: var(--muted-strong);
+        font-size: 12px;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric-card {
+        padding: 16px;
+        display: grid;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .metric-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0));
+      }
+
+      .metric-card:nth-child(1) {
+        background:
+          radial-gradient(circle at top left, rgba(117, 231, 227, 0.12), transparent 35%),
+          var(--panel);
+      }
+
+      .metric-card:nth-child(1)::before {
+        background: linear-gradient(90deg, var(--accent), transparent);
+      }
+
+      .metric-card:nth-child(2) {
+        background:
+          radial-gradient(circle at top left, rgba(101, 184, 255, 0.13), transparent 35%),
+          var(--panel);
+      }
+
+      .metric-card:nth-child(2)::before {
+        background: linear-gradient(90deg, var(--accent-strong), transparent);
+      }
+
+      .metric-card:nth-child(3) {
+        background:
+          radial-gradient(circle at top left, rgba(255, 142, 103, 0.12), transparent 35%),
+          var(--panel);
+      }
+
+      .metric-card:nth-child(3)::before {
+        background: linear-gradient(90deg, var(--accent-coral), transparent);
+      }
+
+      .metric-card:nth-child(4) {
+        background:
+          radial-gradient(circle at top left, rgba(255, 111, 153, 0.11), transparent 35%),
+          var(--panel);
+      }
+
+      .metric-card:nth-child(4)::before {
+        background: linear-gradient(90deg, var(--accent-rose), transparent);
+      }
+
+      .metric-card:nth-child(5) {
+        background:
+          radial-gradient(circle at top left, rgba(142, 125, 255, 0.13), transparent 35%),
+          var(--panel);
+      }
+
+      .metric-card:nth-child(5)::before {
+        background: linear-gradient(90deg, var(--accent-violet), transparent);
+      }
+
+      .metric-card small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .metric-card strong {
+        font-size: 32px;
+        line-height: 1;
+        letter-spacing: -0.06em;
+      }
+
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 16px;
+        min-height: 0;
+        align-items: start;
+      }
+
+      .table-card,
+      .inspector-card {
+        display: grid;
+        gap: 14px;
+        min-height: 0;
+      }
+
+      .table-header,
+      .panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .table-header > div {
+        min-width: 0;
+      }
+
+      .panel-header > div {
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .table-header h2,
+      .panel-header h2 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+      }
+
+      .panel-header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+        max-width: 30ch;
+      }
+
+      .search-shell {
+        min-width: 0;
+        width: min(100%, 440px);
+        flex: 1 1 320px;
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.08), rgba(117, 231, 227, 0.05)),
+          rgba(20, 29, 43, 0.92);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      }
+
+      .search-shell:focus-within {
+        border-color: rgba(116, 230, 218, 0.42);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.02),
+          0 0 0 4px rgba(116, 230, 218, 0.08);
+      }
+
+      .search-shell svg {
+        width: 16px;
+        height: 16px;
+        color: var(--accent-strong);
+        flex: 0 0 auto;
+      }
+
+      .search-shell input {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        height: auto;
+        box-shadow: none;
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .table-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .table-wrap {
+        min-height: 0;
+        overflow: auto;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(180deg, rgba(101, 184, 255, 0.045), rgba(255, 255, 255, 0)),
+          rgba(11, 17, 26, 0.9);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        text-align: left;
+        padding: 14px 16px;
+        background:
+          linear-gradient(90deg, rgba(101, 184, 255, 0.1), rgba(117, 231, 227, 0.04)),
+          rgba(17, 26, 39, 0.98);
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border);
+      }
+
+      tbody td {
+        padding: 15px 16px;
+        border-bottom: 1px solid rgba(177, 193, 222, 0.08);
+        font-size: 14px;
+        vertical-align: top;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody td:first-child {
+        width: 64px;
+        color: var(--muted);
+      }
+
+      a {
+        color: #8bc8ff;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .empty-state,
+      .empty-diagnostics {
+        color: var(--muted);
+        font-size: 14px;
+        padding: 22px 16px;
+      }
+
+      .inspector-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .inspect-form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .inspect-form-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 144px;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .inspect-form-row input,
+      .inspect-form-row button {
+        min-width: 0;
+        height: 52px;
+      }
+
+      .inspect-form-row button {
+        white-space: nowrap;
+      }
+
+      .inspect-result {
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top right, rgba(255, 142, 103, 0.08), transparent 38%),
+          radial-gradient(circle at bottom left, rgba(101, 184, 255, 0.06), transparent 34%),
+          rgba(18, 28, 42, 0.9);
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        min-height: 196px;
+      }
+
+      .inspect-result small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .inspect-result strong {
+        font-size: 15px;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
+      }
+
+      .inspect-result p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+        max-width: 28ch;
+      }
+
+      .warning-stack {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top right, rgba(255, 142, 103, 0.06), transparent 36%),
+          radial-gradient(circle at bottom left, rgba(101, 184, 255, 0.05), transparent 32%),
+          rgba(18, 28, 42, 0.82);
+        align-content: start;
+        min-height: 176px;
+      }
+
+      #diagnosticsPanel {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        padding-top: 2px;
+      }
+
+      .warning-card {
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 208, 145, 0.18);
+        background:
+          linear-gradient(135deg, rgba(255, 197, 107, 0.08), rgba(255, 142, 103, 0.05)),
+          rgba(52, 40, 18, 0.28);
+      }
+
+      .warning-card small {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--warning);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .warning-card div {
+        color: #ffe6c1;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .empty-diagnostics {
+        padding: 0;
+        font-size: 13px;
+        line-height: 1.6;
+        max-width: 28ch;
+      }
+
+      @media (max-width: 1280px) {
+        .app-shell {
+          grid-template-columns: 290px minmax(0, 1fr);
+        }
+
+        .metrics-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .workspace-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .inspector-card {
+          order: -1;
+        }
+      }
+
+      @media (max-width: 960px) {
+        body {
+          padding: 0;
+        }
+
+        .desktop-window {
+          height: 100vh;
+          min-height: 100vh;
+          border-radius: 0;
+        }
+
+        .window-bar {
+          grid-template-columns: 1fr;
+          height: auto;
+          padding: 12px 14px;
+          justify-items: start;
+        }
+
+        .window-center,
+        .window-right {
+          justify-self: stretch;
+        }
+
+        .app-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .field-grid,
+        .button-row,
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .table-header,
+        .panel-header,
+        .table-status,
+        .inspect-form-row {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+
+        .panel-header p,
+        .inspect-result p {
+          max-width: none;
+        }
+
+        .search-shell {
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desktop-window">
+      <header class="window-bar">
+        <div class="window-left">
+          <div class="title-mark" aria-hidden="true">
+            <img class="brand-icon" src="./app-icon.png" alt="" />
+          </div>
+          <div class="app-meta">
+            <strong>Instagram Followback</strong>
+            <span>Desktop live scanner</span>
+          </div>
+        </div>
+
+        <div class="window-center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path>
+            <path d="M7 3v8"></path>
+            <path d="M17 3v8"></path>
+            <rect x="4" y="5" width="16" height="16" rx="3"></rect>
+          </svg>
+          <span>Local workspace</span>
+        </div>
+
+        <div class="window-right">
+          <div class="status-chip" id="sessionChip" data-state="disconnected">
+            <span class="status-dot"></span>
+            <span id="sessionChipLabel">Disconnected</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="app-shell">
+        <aside class="sidebar">
+          <section class="nav-card">
+            <div class="sidebar-kicker">Current session</div>
+            <div class="identity-row">
+              <div class="identity-mark" aria-hidden="true">
+                <img id="sessionAvatar" class="brand-icon session-avatar" src="./app-icon.png" data-default-src="./app-icon.png" alt="" />
+              </div>
+              <div class="identity-copy">
+                <small>Instagram account</small>
+                <strong id="sessionUsername">No account connected</strong>
+              </div>
+            </div>
+            <div class="identity-status">
+              <div class="status-pill" id="sessionPill" data-state="disconnected">
+                <span class="status-dot"></span>
+                <span id="sessionPillLabel">Disconnected</span>
+              </div>
+              <p id="sessionDescription">Create a local Instagram session to unlock live desktop scans.</p>
+            </div>
+          </section>
+
+          <section class="card field-stack">
+            <div class="sidebar-kicker">Scan setup</div>
+            <div class="field">
+              <label for="usernameInput">Instagram username</label>
+              <input id="usernameInput" type="text" placeholder="Leave empty for saved session" />
+            </div>
+            <div class="field-grid scan-grid">
+              <div class="field">
+                <label for="modeSelect">Mode</label>
+                <select id="modeSelect">
+                  <option value="nonfollowers">Non-followers</option>
+                  <option value="fans">Fans</option>
+                  <option value="mutuals">Mutuals</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sortSelect">Sort</label>
+                <select id="sortSelect">
+                  <option value="alpha">Alpha</option>
+                  <option value="length">Length</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="limitInput">Limit</label>
+                <input id="limitInput" type="number" min="1" placeholder="Leave empty for all usernames" />
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="sidebar-kicker">View options</div>
+            <div class="toggle-list">
+              <label class="toggle-row" for="summaryOnlyToggle">
+                <input id="summaryOnlyToggle" type="checkbox" />
+                <span class="toggle-copy">
+                  <strong>Summary only</strong>
+                  <span>Keep stats visible without rendering the full table.</span>
+                </span>
+              </label>
+
+              <label class="toggle-row" for="diagnosticsToggle">
+                <input id="diagnosticsToggle" type="checkbox" />
+                <span class="toggle-copy">
+                  <strong>Diagnostics</strong>
+                  <span>Reveal warnings and date ranges for the current live scan.</span>
+                </span>
+              </label>
+
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="sidebar-kicker">Actions</div>
+            <div class="button-stack">
+              <button id="connectButton">Connect Instagram</button>
+              <div class="button-row">
+                <button id="disconnectButton" class="button-danger">Disconnect</button>
+                <button id="scanButton" class="button-primary">Run scan</button>
+              </div>
+            </div>
+            <div class="action-feedback">
+              <div class="progress-shell" id="progressShell" hidden>
+                <div class="progress-track">
+                  <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div id="progressText">Waiting to start…</div>
+              </div>
+              <div id="statusText">No live desktop session yet. Connect Instagram to continue.</div>
+              <div id="debugText">Debug: idle</div>
+            </div>
+          </section>
+        </aside>
+
+        <main class="workspace">
+          <section class="workspace-card">
+            <div class="panel-kicker">Workspace</div>
+            <div>
+              <h1 id="resultsTitle">Ready for a live scan</h1>
+              <p id="resultsSubtitle">Connect Instagram from the left rail, then run a scan to populate the desktop workspace with current relationship data.</p>
+            </div>
+            <div id="reportMeta"></div>
+          </section>
+
+          <section class="metrics-grid">
+            <article class="metric-card">
+              <small>Followers</small>
+              <strong id="statFollowers">0</strong>
+            </article>
+            <article class="metric-card">
+              <small>Following</small>
+              <strong id="statFollowing">0</strong>
+            </article>
+            <article class="metric-card">
+              <small>Non-followers</small>
+              <strong id="statNonfollowers">0</strong>
+            </article>
+            <article class="metric-card">
+              <small>Fans</small>
+              <strong id="statFans">0</strong>
+            </article>
+            <article class="metric-card">
+              <small>Mutuals</small>
+              <strong id="statMutuals">0</strong>
+            </article>
+          </section>
+
+          <section class="workspace-grid">
+            <section class="table-card">
+              <div class="table-header">
+                <div>
+                  <div class="panel-kicker">Relationship table</div>
+                  <h2>Live usernames</h2>
+                </div>
+                <label class="search-shell" for="searchInput">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="M20 20l-3.5-3.5"></path>
+                  </svg>
+                  <input id="searchInput" type="text" placeholder="Search usernames in the current table" />
+                </label>
+              </div>
+
+              <div class="table-status">
+                <span id="visibleCount">Showing 0 usernames</span>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Username</th>
+                      <th>Profile</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resultsBody">
+                    <tr>
+                      <td colspan="3" class="empty-state">Run your first desktop scan to populate the workspace.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <aside class="inspector-card">
+              <section class="inspector-stack">
+                <div class="panel-header">
+                  <div>
+                    <div class="panel-kicker">Inspector</div>
+                    <h2>Check one username</h2>
+                    <p>Use the current desktop report to confirm whether an account is in followers, following, or both.</p>
+                  </div>
+                </div>
+
+                <div class="inspect-form">
+                  <div class="inspect-form-row">
+                    <input id="inspectInput" type="text" placeholder="Type a username like itsopha" />
+                    <button id="inspectButton">Inspect</button>
+                  </div>
+                  <div class="inspect-result" id="inspectResult">
+                    <small>Relationship</small>
+                    <strong>Nothing inspected yet</strong>
+                    <p>Run a scan first, then inspect any username against the latest desktop report.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section id="diagnosticsPanel" hidden>
+                <div class="panel-header">
+                  <div>
+                    <div class="panel-kicker">Diagnostics</div>
+                    <h2>Warnings and metadata</h2>
+                    <p>These details stay hidden unless you explicitly turn diagnostics on.</p>
+                  </div>
+                </div>
+                <div class="warning-stack" id="warningList">
+                  <div class="empty-diagnostics">No diagnostics are visible yet.</div>
+                </div>
+              </section>
+            </aside>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const tauri = window.__TAURI__;
+      const invoke = tauri?.core?.invoke;
+      const listen = tauri?.event?.listen;
+
+      const state = {
+        session: { connected: false, username: null },
+        report: null,
+        progressUnlisten: null,
+        busy: false,
+        connectPollTimer: null,
+        connectPollDeadline: 0,
+        pendingUsername: null,
+      };
+
+      const els = {
+        sessionUsername: document.getElementById("sessionUsername"),
+        sessionAvatar: document.getElementById("sessionAvatar"),
+        sessionChip: document.getElementById("sessionChip"),
+        sessionChipLabel: document.getElementById("sessionChipLabel"),
+        sessionPill: document.getElementById("sessionPill"),
+        sessionPillLabel: document.getElementById("sessionPillLabel"),
+        sessionDescription: document.getElementById("sessionDescription"),
+        statusText: document.getElementById("statusText"),
+        debugText: document.getElementById("debugText"),
+        progressShell: document.getElementById("progressShell"),
+        progressBar: document.getElementById("progressBar"),
+        progressText: document.getElementById("progressText"),
+        usernameInput: document.getElementById("usernameInput"),
+        modeSelect: document.getElementById("modeSelect"),
+        sortSelect: document.getElementById("sortSelect"),
+        limitInput: document.getElementById("limitInput"),
+        summaryOnlyToggle: document.getElementById("summaryOnlyToggle"),
+        diagnosticsToggle: document.getElementById("diagnosticsToggle"),
+        connectButton: document.getElementById("connectButton"),
+        disconnectButton: document.getElementById("disconnectButton"),
+        scanButton: document.getElementById("scanButton"),
+        resultsTitle: document.getElementById("resultsTitle"),
+        resultsSubtitle: document.getElementById("resultsSubtitle"),
+        warningList: document.getElementById("warningList"),
+        diagnosticsPanel: document.getElementById("diagnosticsPanel"),
+        searchInput: document.getElementById("searchInput"),
+        reportMeta: document.getElementById("reportMeta"),
+        visibleCount: document.getElementById("visibleCount"),
+        resultsBody: document.getElementById("resultsBody"),
+        inspectInput: document.getElementById("inspectInput"),
+        inspectButton: document.getElementById("inspectButton"),
+        inspectResult: document.getElementById("inspectResult"),
+        statFollowers: document.getElementById("statFollowers"),
+        statFollowing: document.getElementById("statFollowing"),
+        statNonfollowers: document.getElementById("statNonfollowers"),
+        statFans: document.getElementById("statFans"),
+        statMutuals: document.getElementById("statMutuals"),
+      };
+
+      function setBusy(nextBusy) {
+        state.busy = nextBusy;
+        els.connectButton.disabled = nextBusy || state.session.connected;
+        els.disconnectButton.disabled = nextBusy || !state.session.connected;
+        els.scanButton.disabled = nextBusy || !state.session.connected;
+      }
+
+      function stopConnectPolling() {
+        if (state.connectPollTimer) {
+          clearInterval(state.connectPollTimer);
+          state.connectPollTimer = null;
+        }
+        state.connectPollDeadline = 0;
+        state.pendingUsername = null;
+      }
+
+      function startConnectPolling() {
+        stopConnectPolling();
+        state.connectPollDeadline = Date.now() + 3 * 60 * 1000;
+        state.connectPollTimer = setInterval(async () => {
+          try {
+            const session = await call("get_session_status");
+            renderSession(session);
+            if (session.connected) {
+              stopConnectPolling();
+              setStatus(session.username
+                ? `Instagram connected as @${session.username}.`
+                : "Instagram session connected. Username will be detected automatically during the scan.");
+              els.connectButton.textContent = "Connect Instagram";
+              setBusy(false);
+              return;
+            }
+
+            if (Date.now() > state.connectPollDeadline) {
+              stopConnectPolling();
+              setStatus("Still waiting for Instagram login. Finish the browser login flow, then try Connect again if needed.");
+              els.connectButton.textContent = "Connect Instagram";
+              setBusy(false);
+            }
+          } catch (error) {
+            stopConnectPolling();
+            els.connectButton.textContent = "Connect Instagram";
+            setBusy(false);
+            setStatus(String(error));
+          }
+        }, 2000);
+      }
+
+      function setStatus(message) {
+        els.statusText.textContent = message;
+      }
+
+      function setDebug(message) {
+        els.debugText.textContent = `Debug: ${message}`;
+      }
+
+      function nextFrame() {
+        return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+      }
+
+      function setConnectionState(connected) {
+        const value = connected ? "connected" : "disconnected";
+        els.sessionChip.dataset.state = value;
+        els.sessionPill.dataset.state = value;
+      }
+
+      function renderPendingConnection(username) {
+        const normalized = username?.trim()?.replace(/^@+/, "") || "instagram";
+        state.pendingUsername = normalized;
+        els.sessionUsername.textContent = `@${normalized}`;
+        els.sessionChipLabel.textContent = "Waiting";
+        els.sessionPillLabel.textContent = "Waiting";
+        els.sessionDescription.textContent = "Instagram browser is open. Finish the login there and the desktop app will attach the saved session automatically.";
+        setConnectionState(false);
+      }
+
+      function renderSessionAvatar(session) {
+        const defaultSrc = els.sessionAvatar.dataset.defaultSrc || "./app-icon.png";
+        const avatarSrc = session?.avatar_data_url || defaultSrc;
+        els.sessionAvatar.src = avatarSrc;
+        els.sessionAvatar.alt = session?.username
+          ? `Instagram avatar for @${session.username}`
+          : "Instagram account avatar";
+      }
+
+      function renderSession(session) {
+        state.session = session;
+        const username = session.connected
+          ? (session.username ? `@${session.username}` : "Instagram session connected")
+          : "No account connected";
+        els.sessionUsername.textContent = username;
+        renderSessionAvatar(session);
+        els.sessionChipLabel.textContent = session.connected ? "Connected" : "Disconnected";
+        els.sessionPillLabel.textContent = session.connected ? "Connected" : "Disconnected";
+        els.sessionDescription.textContent = session.connected
+          ? (session.username
+            ? "Your Instagram session is stored locally in the desktop app data directory and is ready for live scans."
+            : "A saved Instagram browser session is present locally and is ready for live scans. The username will be detected automatically during the scan if needed.")
+          : "Create a local Instagram session to unlock live desktop scans.";
+        setConnectionState(Boolean(session.connected));
+        if (!els.usernameInput.value && session.username) {
+          els.usernameInput.value = session.username;
+        }
+        setBusy(state.busy);
+      }
+
+      function setProgress(progress, message) {
+        els.progressShell.hidden = false;
+        els.progressBar.style.width = `${Math.max(0, Math.min(progress ?? 0, 100))}%`;
+        els.progressText.textContent = message;
+      }
+
+      function clearProgress() {
+        els.progressShell.hidden = true;
+        els.progressBar.style.width = "0%";
+      }
+
+      function renderWarnings(report) {
+        const diagnosticsEnabled = els.diagnosticsToggle.checked;
+        els.diagnosticsPanel.hidden = !diagnosticsEnabled;
+        els.warningList.innerHTML = "";
+
+        if (!diagnosticsEnabled || !report) {
+          if (!report) {
+            els.warningList.innerHTML = '<div class="empty-diagnostics">No diagnostics are visible yet.</div>';
+          }
+          return;
+        }
+
+        const warnings = Array.isArray(report.warnings) ? report.warnings : [];
+        const ranges = report.time_ranges || {};
+        const cards = [];
+
+        if (ranges.followers?.start_date && ranges.followers?.end_date) {
+          cards.push(`
+            <div class="warning-card">
+              <small>Follower range</small>
+              <div>${ranges.followers.start_date} → ${ranges.followers.end_date}</div>
+            </div>
+          `);
+        }
+
+        if (ranges.following?.start_date && ranges.following?.end_date) {
+          cards.push(`
+            <div class="warning-card">
+              <small>Following range</small>
+              <div>${ranges.following.start_date} → ${ranges.following.end_date}</div>
+            </div>
+          `);
+        }
+
+        warnings.forEach((warning) => {
+          cards.push(`
+            <div class="warning-card">
+              <small>Warning</small>
+              <div>${warning}</div>
+            </div>
+          `);
+        });
+
+        els.warningList.innerHTML = cards.length
+          ? cards.join("")
+          : '<div class="empty-diagnostics">No warnings or extra diagnostics for the current report.</div>';
+      }
+
+      function renderMeta(report) {
+        const meta = [
+          `Mode: ${report.mode_label}`,
+          `Account: @${report.scan_username}`,
+          `Matches: ${report.total_matches}`,
+          `Saved: ${report.created_at}`,
+        ];
+        els.reportMeta.innerHTML = meta.map((item) => `<span class="pill">${item}</span>`).join("");
+      }
+
+      function renderStats(report) {
+        const stats = report.stats || {};
+        els.statFollowers.textContent = stats.followers ?? 0;
+        els.statFollowing.textContent = stats.following ?? 0;
+        els.statNonfollowers.textContent = stats.nonfollowers ?? 0;
+        els.statFans.textContent = stats.fans ?? 0;
+        els.statMutuals.textContent = stats.mutuals ?? 0;
+      }
+
+      function filteredEntries() {
+        if (!state.report) {
+          return [];
+        }
+        const query = els.searchInput.value.trim().toLowerCase();
+        const source = Array.isArray(state.report.entries) ? state.report.entries : [];
+        if (!query) {
+          return source;
+        }
+        return source.filter((entry) => entry.username.toLowerCase().includes(query));
+      }
+
+      function renderTable() {
+        const report = state.report;
+        if (!report) {
+          els.visibleCount.textContent = "Showing 0 usernames";
+          els.resultsBody.innerHTML = '<tr><td colspan="3" class="empty-state">Run your first desktop scan to populate the workspace.</td></tr>';
+          return;
+        }
+
+        if (els.summaryOnlyToggle.checked) {
+          els.visibleCount.textContent = `Showing ${report.total_matches} usernames in summary mode`;
+          els.resultsBody.innerHTML = '<tr><td colspan="3" class="empty-state">Summary only is enabled. Turn it off to view the result table.</td></tr>';
+          return;
+        }
+
+        const entries = filteredEntries();
+        els.visibleCount.textContent = `Showing ${entries.length} username(s)`;
+
+        if (!entries.length) {
+          els.resultsBody.innerHTML = '<tr><td colspan="3" class="empty-state">No usernames match the current search.</td></tr>';
+          return;
+        }
+
+        els.resultsBody.innerHTML = entries.map((entry, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${entry.username}</td>
+            <td><a href="${entry.profile_url}" target="_blank" rel="noreferrer">${entry.profile_url}</a></td>
+          </tr>
+        `).join("");
+      }
+
+      function renderInspect() {
+        const raw = els.inspectInput.value.trim().toLowerCase().replace(/^@+/, "");
+        if (!raw || !state.report) {
+          els.inspectResult.innerHTML = `
+            <small>Relationship</small>
+            <strong>Nothing inspected yet</strong>
+            <p>Run a scan first, then inspect any username against the latest desktop report.</p>
+          `;
+          return;
+        }
+
+        const followers = new Set(state.report.followers_usernames || []);
+        const following = new Set(state.report.following_usernames || []);
+        const inFollowers = followers.has(raw);
+        const inFollowing = following.has(raw);
+
+        let relationship = "Not found";
+        if (inFollowers && inFollowing) relationship = "Mutual";
+        else if (inFollowing) relationship = "Not following back";
+        else if (inFollowers) relationship = "Fan";
+
+        els.inspectResult.innerHTML = `
+          <small>Relationship</small>
+          <strong>@${raw} — ${relationship}</strong>
+          <p>In followers: <strong>${inFollowers ? "Yes" : "No"}</strong><br />In following: <strong>${inFollowing ? "Yes" : "No"}</strong></p>
+        `;
+      }
+
+      function renderReport(report) {
+        state.report = report;
+        els.resultsTitle.textContent = report.mode_label;
+        els.resultsSubtitle.textContent = `Current desktop snapshot for @${report.scan_username}. The app is calling the live engine directly and keeping the whole scan local.`;
+        renderMeta(report);
+        renderStats(report);
+        renderWarnings(report);
+        renderInspect();
+        renderTable();
+      }
+
+      async function call(command, payload) {
+        if (!invoke) {
+          throw new Error("Tauri API is not available in this window.");
+        }
+        return invoke(command, payload);
+      }
+
+      async function refreshSession() {
+        setDebug("refreshSession: started");
+        const session = await call("get_session_status");
+        renderSession(session);
+        setDebug(`refreshSession: connected=${Boolean(session.connected)} username=${session.username || "none"}`);
+        setStatus(session.connected
+          ? (session.username
+            ? `Desktop session ready for @${session.username}.`
+            : "Desktop session ready. Instagram username will be detected automatically when you run a scan.")
+          : "No live desktop session yet. Connect Instagram to continue.");
+      }
+
+      async function handleConnect() {
+        try {
+          setDebug("handleConnect: clicked");
+          setBusy(true);
+          els.connectButton.textContent = "Waiting for login…";
+          setStatus("Opening Instagram browser. Finish the login there, then return here.");
+          await nextFrame();
+          setDebug("handleConnect: invoke about to start");
+          const username = els.usernameInput.value.trim();
+          if (username) {
+            renderPendingConnection(username);
+          }
+          const response = await call("connect_instagram", { username: username || null });
+          setDebug(`handleConnect: invoke returned ${JSON.stringify(response)}`);
+          const immediateSession = await call("get_session_status");
+          renderSession(immediateSession);
+          if (immediateSession.connected) {
+            stopConnectPolling();
+            els.connectButton.textContent = "Connect Instagram";
+            setBusy(false);
+            setDebug("handleConnect: session connected immediately");
+            setStatus(immediateSession.username
+              ? `Instagram connected as @${immediateSession.username}.`
+              : "Instagram session connected. Username will be detected automatically during the scan.");
+            return;
+          }
+          setDebug("handleConnect: polling started");
+          setStatus(response?.message || "Instagram browser launched. Complete the login flow there. This app will detect the session automatically.");
+          startConnectPolling();
+        } catch (error) {
+          setDebug(`handleConnect: failed ${String(error)}`);
+          els.connectButton.textContent = "Connect Instagram";
+          setStatus(String(error));
+          setBusy(false);
+        } finally {
+          if (!state.connectPollTimer) {
+            setBusy(false);
+          }
+        }
+      }
+
+      async function handleDisconnect() {
+        try {
+          stopConnectPolling();
+          setBusy(true);
+          els.connectButton.textContent = "Connect Instagram";
+          const session = await call("disconnect_instagram");
+          renderSession(session);
+          state.report = null;
+          renderWarnings(null);
+          renderTable();
+          renderInspect();
+          renderStats({ stats: {} });
+          els.reportMeta.innerHTML = "";
+          els.resultsTitle.textContent = "Ready for a live scan";
+          els.resultsSubtitle.textContent = "Connect Instagram from the left rail, then run a scan to populate the desktop workspace with current relationship data.";
+          els.searchInput.value = "";
+          setStatus("The saved Instagram desktop session was removed.");
+        } catch (error) {
+          setStatus(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function handleScan() {
+        try {
+          setBusy(true);
+          setProgress(4, "Launching the desktop live scan.");
+          setStatus("Background scan started. The browser window will stay hidden unless Instagram needs a fresh visible login.");
+          const payload = {
+            request: {
+              username: els.usernameInput.value.trim() || null,
+              mode: els.modeSelect.value,
+              sortMode: els.sortSelect.value,
+              limit: els.limitInput.value ? Number(els.limitInput.value) : null,
+              statsOnly: els.summaryOnlyToggle.checked,
+              backgroundScan: true,
+            },
+          };
+          const report = await call("run_live_scan", payload);
+          renderReport(report);
+          const session = await call("get_session_status");
+          renderSession(session);
+          setStatus(`Live scan completed for @${report.scan_username}.`);
+        } catch (error) {
+          setStatus(String(error));
+        } finally {
+          clearProgress();
+          setBusy(false);
+        }
+      }
+
+      async function init() {
+        if (!invoke || !listen) {
+          setDebug("init: tauri api unavailable");
+          setStatus("This interface needs to run inside the Tauri desktop app.");
+          return;
+        }
+
+        state.progressUnlisten = await listen("scan-progress", (event) => {
+          const payload = event.payload || {};
+          setProgress(payload.progress ?? 0, payload.message || "Working...");
+        });
+
+        els.connectButton.addEventListener("pointerdown", () => setDebug("connectButton: pointerdown"));
+        els.connectButton.addEventListener("click", handleConnect);
+        els.disconnectButton.addEventListener("click", handleDisconnect);
+        els.scanButton.addEventListener("click", handleScan);
+        els.searchInput.addEventListener("input", renderTable);
+        els.inspectButton.addEventListener("click", renderInspect);
+        els.inspectInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            renderInspect();
+          }
+        });
+        els.summaryOnlyToggle.addEventListener("change", renderTable);
+        els.diagnosticsToggle.addEventListener("change", () => renderWarnings(state.report));
+
+        renderWarnings(null);
+        setDebug("init: listeners attached");
+        await refreshSession();
+        els.connectButton.textContent = "Connect Instagram";
+      }
+
+      init().catch((error) => {
+        setDebug(`init: failed ${String(error)}`);
+        setStatus(String(error));
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Capture product-style desktop screenshots using a mocked Tauri runtime."""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import os
+import socketserver
+import threading
+import time
+from http.server import SimpleHTTPRequestHandler
+from pathlib import Path
+from urllib.parse import quote
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = ROOT / "docs" / "screenshots"
+HOST = "127.0.0.1"
+PORT = 41731
+DEFAULT_BROWSERS_PATH = ROOT / ".desktop-runtime" / "playwright-browsers"
+
+
+def avatar_data_url(initials: str, *, start: str, end: str) -> str:
+    svg = f"""
+    <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="{start}"/>
+          <stop offset="100%" stop-color="{end}"/>
+        </linearGradient>
+      </defs>
+      <rect width="160" height="160" rx="80" fill="url(#g)"/>
+      <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+      <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle"
+            font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+            font-size="58" font-weight="700" fill="white">{initials}</text>
+    </svg>
+    """.strip()
+    return f"data:image/svg+xml;utf8,{quote(svg)}"
+
+
+def build_report() -> dict[str, object]:
+    entries = [
+        {"username": "northlight", "profile_url": "https://www.instagram.com/northlight/"},
+        {"username": "atelierframe", "profile_url": "https://www.instagram.com/atelierframe/"},
+        {"username": "nova.collective", "profile_url": "https://www.instagram.com/nova.collective/"},
+        {"username": "studioharbor", "profile_url": "https://www.instagram.com/studioharbor/"},
+        {"username": "fwdvision", "profile_url": "https://www.instagram.com/fwdvision/"},
+        {"username": "quietarchive", "profile_url": "https://www.instagram.com/quietarchive/"},
+    ]
+    return {
+        "scan_username": "studio.demo",
+        "created_at": "2026-03-13T12:48:00Z",
+        "mode": "nonfollowers",
+        "mode_label": "Accounts you follow that do not follow you back",
+        "sort": "alpha",
+        "limit": None,
+        "stats_only": False,
+        "stats": {
+            "followers": 412,
+            "following": 538,
+            "nonfollowers": 126,
+            "fans": 49,
+            "mutuals": 363,
+        },
+        "warnings": [
+            "Instagram hid part of one dialog while the scanner was collecting results.",
+            "One profile was skipped because the relation link changed during the scan.",
+        ],
+        "time_ranges": {
+            "followers": {"start_date": "2026-03-12", "end_date": "2026-03-13"},
+            "following": {"start_date": "2026-03-12", "end_date": "2026-03-13"},
+        },
+        "followers_usernames": [
+            "calm.signal",
+            "field.note",
+            "northlight",
+            "open.room",
+            "studio.demo",
+        ],
+        "following_usernames": [
+            "atelierframe",
+            "northlight",
+            "nova.collective",
+            "quietarchive",
+            "studio.demo",
+            "studioharbor",
+            "fwdvision",
+        ],
+        "entries": entries,
+        "all_entries": entries,
+        "shown_matches": len(entries),
+        "total_matches": 126,
+        "used_files": {
+            "followers": ["live-instagram://studio.demo/followers"],
+            "following": ["live-instagram://studio.demo/following"],
+        },
+    }
+
+
+def build_mock_script() -> str:
+    session = {
+        "connected": True,
+        "username": "studio.demo",
+        "avatar_data_url": avatar_data_url("SD", start="#6AA8FF", end="#FF8B71"),
+        "browser_state_present": True,
+        "session_dir": "/Users/demo/Library/Application Support/com.mishabelyakov.instagramfollowback/live-session",
+    }
+    report = build_report()
+    progress_steps = [
+        {"phase": "boot", "message": "Launching the local analysis runtime.", "progress": 6},
+        {"phase": "auth", "message": "Reusing the saved Instagram session.", "progress": 18},
+        {"phase": "followers", "message": "Reading followers.", "progress": 44},
+        {"phase": "following", "message": "Reading following.", "progress": 71},
+        {"phase": "finalize", "message": "Preparing the report.", "progress": 94},
+    ]
+    payload = json.dumps(
+        {
+            "session": session,
+            "report": report,
+            "progress_steps": progress_steps,
+        }
+    )
+    return f"""
+      (() => {{
+        const payload = {payload};
+        const listeners = new Map();
+        window.__DOCS_MOCK__ = payload;
+
+        window.__TAURI__ = {{
+          core: {{
+            invoke: async (command, args) => {{
+              if (command === "get_session_status") {{
+                return payload.session;
+              }}
+              if (command === "disconnect_instagram") {{
+                return {{
+                  ...payload.session,
+                  connected: false,
+                  username: null,
+                  avatar_data_url: null,
+                  browser_state_present: false,
+                }};
+              }}
+              if (command === "connect_instagram") {{
+                return {{ started: true, message: "Instagram login browser launched." }};
+              }}
+              if (command === "run_live_scan") {{
+                const handler = listeners.get("scan-progress");
+                if (handler) {{
+                  for (const step of payload.progress_steps) {{
+                    handler({{ payload: step }});
+                  }}
+                }}
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                return payload.report;
+              }}
+              throw new Error(`Unsupported mocked command: ${{command}}`);
+            }},
+          }},
+          event: {{
+            listen: async (eventName, callback) => {{
+              listeners.set(eventName, callback);
+              return async () => listeners.delete(eventName);
+            }},
+          }},
+        }};
+      }})();
+    """
+
+
+@contextlib.contextmanager
+def local_server():
+    class Handler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(ROOT), **kwargs)
+
+        def log_message(self, fmt, *args):
+            return
+
+    httpd = socketserver.TCPServer((HOST, PORT), Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://{HOST}:{PORT}/desktop-shell/index.html"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        thread.join(timeout=1)
+
+
+def capture_overview(page, output_path: Path) -> None:
+    page.goto(page.url, wait_until="networkidle")
+    page.locator(".desktop-window").screenshot(path=str(output_path))
+
+
+def capture_results(page, output_path: Path) -> None:
+    page.evaluate(
+        """
+        () => {
+          renderReport(window.__DOCS_MOCK__.report);
+          document.getElementById('diagnosticsToggle').checked = true;
+          renderWarnings(window.__DOCS_MOCK__.report);
+          document.getElementById('inspectInput').value = 'northlight';
+          renderInspect();
+          setStatus('Live scan completed for @studio.demo.');
+        }
+        """
+    )
+    page.locator(".desktop-window").screenshot(path=str(output_path))
+
+
+def main() -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    if DEFAULT_BROWSERS_PATH.exists():
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(DEFAULT_BROWSERS_PATH))
+    with local_server() as url, sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        try:
+            context = browser.new_context(
+                viewport={"width": 1540, "height": 1100},
+                device_scale_factor=2,
+                color_scheme="dark",
+            )
+            page = context.new_page()
+            page.add_init_script(build_mock_script())
+            page.goto(url, wait_until="networkidle")
+            time.sleep(0.25)
+            capture_overview(page, OUTPUT_DIR / "overview.png")
+
+            page = context.new_page()
+            page.add_init_script(build_mock_script())
+            page.goto(url, wait_until="networkidle")
+            time.sleep(0.25)
+            capture_results(page, OUTPUT_DIR / "results.png")
+            context.close()
+        finally:
+            browser.close()
+
+
+if __name__ == "__main__":
+    main()

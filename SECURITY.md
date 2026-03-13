@@ -2,34 +2,48 @@
 
 ## Supported Versions
 
-Only the latest version on the `main` branch is considered supported.
+Only the latest state of the `main` branch is treated as supported.
 
-At the moment, that means:
+At the moment that means:
 
 - `0.2.x` — supported
-- older versions — not supported
+- older versions — unsupported
 
-## What This Project Treats As Sensitive
+## Sensitive Data In This Project
 
-This repository is a local-first project and may interact with a real Instagram session.
+This repository is local-first and may interact with a real Instagram session.
 
-Sensitive data may include:
+Treat the following as sensitive:
 
-- the saved local browser session under `~/.instagram-followback-checker/live-session`
-- Playwright browser state, cookies, or profile data
-- exported reports that contain usernames or profile URLs
-- local history files created by the app
-- any screenshots that contain your real Instagram account data
+- desktop session data under `~/Library/Application Support/com.mishabelyakov.instagramfollowback/live-session`
+- web UI session data under `~/.instagram-followback-checker/live-session`
+- browser state, cookies, or Playwright profile files
+- exported reports with real usernames or profile URLs
+- local history files
+- screenshots that show real Instagram data
 
-Do **not** upload or attach any of the above in a public issue.
+The desktop session metadata may also include:
+
+- the connected Instagram username
+- a cached local avatar preview used in the session card
+
+Do not attach any of the above to a public issue.
+
+## Documentation Screenshots
+
+The screenshots committed under [`docs/screenshots`](./docs/screenshots/) are synthetic product captures generated from mocked demo data.
+
+If you refresh them locally:
+
+- do not use your real account data
+- do not capture real usernames, profile photos, or relationship lists
+- review the output before committing
 
 ## Safe Reporting
 
 If you discover a security issue, report it privately instead of opening a public issue with sensitive details.
 
-Use GitHub private reporting if it is enabled for the repository.
-
-If private reporting is not available, contact the maintainer directly and include:
+Include:
 
 - a short description of the issue
 - impact
@@ -37,30 +51,30 @@ If private reporting is not available, contact the maintainer directly and inclu
 - whether real Instagram session data is involved
 - whether the issue affects only local use or could leak data more broadly
 
-## Good Security Practices For This Repo
+## Good Security Practices
 
-When working with this project:
+When working on this repo:
 
-- keep the app bound to `127.0.0.1` unless you intentionally know why you need another host
-- never commit `~/.instagram-followback-checker/`
-- never commit exported Instagram archives, local reports, or history files
-- use the built-in `Disconnect` action if you want to remove the saved local session
-- review screenshots before publishing them to make sure they do not contain real account data
+- keep the browser UI bound to `127.0.0.1` unless you intentionally need something else
+- never commit local session directories
+- never commit exported Instagram archives or personal reports
+- use `Disconnect` if you want the saved Instagram session removed from the machine
+- prefer synthetic demo data for docs, screenshots, and issue reproduction
 
 ## Scope Notes
 
 This project:
 
-- does **not** provide a hosted service
-- does **not** require a cloud backend for the live workflow
-- stores session data locally on the user machine
+- does not run a hosted backend
+- does not require a cloud account
+- stores live session data locally on the user machine
 
-Because of that, most realistic security risks here are:
+The most realistic risks are therefore:
 
 - accidental leakage of local session data
-- accidental publication of screenshots or exports with real usernames
-- running the local web UI on a non-local interface unintentionally
+- accidental publication of real screenshots or exported reports
+- running the browser UI on a non-local interface unintentionally
 
 ## Disclosure Expectations
 
-Please give the maintainer reasonable time to review and fix a valid report before publishing full technical details.
+Please allow reasonable time to review and fix a valid report before publishing full technical details.

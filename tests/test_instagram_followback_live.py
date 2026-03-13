@@ -7,14 +7,21 @@ from instagram_followback_live import (
     build_live_result,
     clear_live_session,
     extract_live_usernames,
+    extract_profile_avatar_url,
+    infer_username_from_candidates,
+    infer_username_from_current_page,
+    infer_username_from_html,
     live_relation_url,
+    load_session_avatar_data_url,
     load_session_username,
     normalize_profile_username,
     prompt_for_profile_username,
+    save_session_profile,
     resolve_requested_username,
     save_session_username,
     session_has_browser_state,
     text_suggests_login_required,
+    wait_for_confirmed_login,
 )
 
 
@@ -73,12 +80,101 @@ class InstagramFollowbackLiveTests(unittest.TestCase):
         self.assertTrue(text_suggests_login_required("See Instagram photos and videos from your friends."))
         self.assertFalse(text_suggests_login_required("followers following posts"))
 
+    def test_infer_username_from_candidates_returns_single_normalized_match(self):
+        self.assertEqual(
+            infer_username_from_candidates([" @Demo.User ", "https://www.instagram.com/demo.user/"]),
+            "demo.user",
+        )
+
+    def test_infer_username_from_candidates_rejects_ambiguous_singletons(self):
+        self.assertIsNone(infer_username_from_candidates(["alice", "bob"]))
+
+    def test_infer_username_from_candidates_ignores_reserved_instagram_paths(self):
+        self.assertIsNone(
+            infer_username_from_candidates(["accounts", "explore", "reel", "tv"])
+        )
+
+    def test_infer_username_from_html_extracts_username_from_embedded_page_data(self):
+        html = """
+        <script type="application/json">
+          {"viewer":{"username":"demo.user"},"user":{"username":"another_person"}}
+        </script>
+        """
+        self.assertEqual(infer_username_from_html(html), "demo.user")
+
+    def test_infer_username_from_html_ignores_accounts_path_from_edit_profile_links(self):
+        html = """
+        <a href="https://www.instagram.com/accounts/edit/">Edit profile</a>
+        <a href="https://www.instagram.com/accounts/privacy_and_security/">Privacy</a>
+        """
+        self.assertIsNone(infer_username_from_html(html))
+
+    def test_extract_profile_avatar_url_prefers_og_image(self):
+        page = mock.Mock()
+        page.evaluate.return_value = "https://cdn.example.com/avatar.jpg"
+        self.assertEqual(extract_profile_avatar_url(page), "https://cdn.example.com/avatar.jpg")
+
+    def test_infer_username_from_current_page_reads_dom_without_waits(self):
+        page = mock.Mock()
+        page.locator.return_value.first.input_value.return_value = "Demo.User"
+
+        self.assertEqual(infer_username_from_current_page(page), "demo.user")
+
+    def test_wait_for_confirmed_login_skips_edit_profile_when_username_is_known(self):
+        page = mock.Mock()
+        page.wait_for_timeout.return_value = None
+
+        with mock.patch("instagram_followback_live.dismiss_known_dialogs"), \
+             mock.patch("instagram_followback_live.looks_logged_out", return_value=False), \
+             mock.patch("instagram_followback_live.infer_username_from_current_page", return_value=None), \
+             mock.patch("instagram_followback_live.time.monotonic", side_effect=[0, 0, 0]):
+            resolved = wait_for_confirmed_login(
+                page,
+                "known_user",
+                TimeoutError,
+                login_timeout_ms=1000,
+            )
+
+        self.assertEqual(resolved, "known_user")
+        page.goto.assert_not_called()
+
+    def test_wait_for_confirmed_login_uses_current_page_before_edit_profile(self):
+        page = mock.Mock()
+        page.wait_for_timeout.return_value = None
+
+        with mock.patch("instagram_followback_live.dismiss_known_dialogs"), \
+             mock.patch("instagram_followback_live.looks_logged_out", return_value=False), \
+             mock.patch("instagram_followback_live.infer_username_from_current_page", return_value="page_user"), \
+             mock.patch("instagram_followback_live.time.monotonic", side_effect=[0, 0]):
+            resolved = wait_for_confirmed_login(
+                page,
+                None,
+                TimeoutError,
+                login_timeout_ms=1000,
+            )
+
+        self.assertEqual(resolved, "page_user")
+        page.goto.assert_not_called()
+
     def test_save_and_load_session_username(self):
         with tempfile.TemporaryDirectory() as tmp:
             session_dir = Path(tmp)
             save_session_username(session_dir, "demo.user")
 
             self.assertEqual(load_session_username(session_dir), "demo.user")
+
+    def test_save_session_profile_preserves_avatar_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session_dir = Path(tmp)
+            save_session_profile(
+                session_dir,
+                username="demo.user",
+                avatar_data_url="data:image/png;base64,abc123",
+            )
+            save_session_username(session_dir, "demo.user")
+
+            self.assertEqual(load_session_username(session_dir), "demo.user")
+            self.assertEqual(load_session_avatar_data_url(session_dir), "data:image/png;base64,abc123")
 
     def test_resolve_requested_username_prefers_saved_session_username(self):
         with tempfile.TemporaryDirectory() as tmp:

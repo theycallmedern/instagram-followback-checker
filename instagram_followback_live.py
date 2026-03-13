@@ -4,16 +4,22 @@
 from __future__ import annotations
 
 import argparse
+import collections
+import base64
 import json
+import re
 import shutil
 import sys
 import time
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Set
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 from instagram_followback_checker import (
     AnalysisResult,
     MODE_LABELS,
+    RESERVED_PATH_SEGMENTS,
     VERSION,
     apply_limit,
     normalize_username,
@@ -55,7 +61,7 @@ DISMISS_BUTTON_MARKERS = (
     "skip",
     "пропустить",
 )
-SCROLL_TO_END_SCRIPT = """
+SCROLL_TO_END_SCRIPT = r"""
 () => {
   const dialog = document.querySelector('[role="dialog"]');
   if (!dialog) {
@@ -184,26 +190,56 @@ def session_info_path(session_dir: Path) -> Path:
     return session_dir / SESSION_INFO_FILENAME
 
 
-def save_session_username(session_dir: Path, username: str) -> None:
+def load_session_info(session_dir: Path) -> dict[str, str]:
+    info_path = session_info_path(session_dir)
+    if not info_path.exists():
+        return {}
+
+    try:
+        payload = json.loads(info_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    return payload if isinstance(payload, dict) else {}
+
+
+def save_session_profile(
+    session_dir: Path,
+    *,
+    username: Optional[str] = None,
+    avatar_data_url: Optional[str] = None,
+) -> None:
     session_dir.mkdir(parents=True, exist_ok=True)
-    payload = {"username": username}
+    payload = load_session_info(session_dir)
+
+    if username is not None:
+        payload["username"] = username
+    if avatar_data_url is not None:
+        payload["avatar_data_url"] = avatar_data_url
+
     session_info_path(session_dir).write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
 
+def save_session_username(session_dir: Path, username: str) -> None:
+    save_session_profile(session_dir, username=username)
+
+
 def load_session_username(session_dir: Path) -> Optional[str]:
-    info_path = session_info_path(session_dir)
-    if not info_path.exists():
-        return None
-
-    try:
-        payload = json.loads(info_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-
+    payload = load_session_info(session_dir)
     return normalize_profile_username(payload.get("username"))
+
+
+def load_session_avatar_data_url(session_dir: Path) -> Optional[str]:
+    payload = load_session_info(session_dir)
+    avatar_data_url = payload.get("avatar_data_url")
+    if not isinstance(avatar_data_url, str):
+        return None
+    if not avatar_data_url.startswith("data:image/"):
+        return None
+    return avatar_data_url
 
 
 def session_has_browser_state(session_dir: Path) -> bool:
@@ -305,24 +341,75 @@ def dismiss_known_dialogs(page, *, verbose: bool = False) -> bool:
 
 def wait_for_login_in_browser(
     page,
-    target_url: str,
     *,
     login_timeout_ms: int,
     verbose: bool = False,
 ) -> None:
     deadline = time.monotonic() + login_timeout_ms / 1000
+    logged_in_rounds = 0
     while time.monotonic() < deadline:
         dismiss_known_dialogs(page, verbose=verbose)
         if not looks_logged_out(page):
-            page.goto(target_url, wait_until="domcontentloaded")
-            dismiss_known_dialogs(page, verbose=verbose)
-            if not looks_logged_out(page):
+            logged_in_rounds += 1
+            if logged_in_rounds >= 4:
                 return
+        else:
+            logged_in_rounds = 0
         page.wait_for_timeout(1000)
 
     raise LiveModeError(
         "Instagram session is still not authenticated. Finish the login in the opened browser and try again."
     )
+
+
+def wait_for_confirmed_login(
+    page,
+    requested_username: Optional[str],
+    timeout_error,
+    *,
+    login_timeout_ms: int,
+    verbose: bool = False,
+) -> str:
+    deadline = time.monotonic() + login_timeout_ms / 1000
+    last_error = "Instagram login could not be confirmed yet."
+
+    while time.monotonic() < deadline:
+        dismiss_known_dialogs(page, verbose=verbose)
+        if looks_logged_out(page):
+            page.wait_for_timeout(1000)
+            continue
+
+        if requested_username:
+            return requested_username
+
+        resolved_username = infer_username_from_current_page(page)
+        if resolved_username:
+            return resolved_username
+
+        try:
+            page.goto("https://www.instagram.com/accounts/edit/", wait_until="domcontentloaded")
+        except Exception:
+            page.wait_for_timeout(1000)
+            continue
+
+        dismiss_known_dialogs(page, verbose=verbose)
+        if looks_logged_out(page):
+            last_error = "Instagram returned to the login wall while confirming the session."
+            page.wait_for_timeout(1000)
+            continue
+
+        resolved_username = detect_logged_in_username(
+            page,
+            timeout_error,
+            verbose=verbose,
+        )
+        if resolved_username:
+            return resolved_username
+
+        last_error = "Instagram login succeeded, but the account username could not be confirmed yet."
+        page.wait_for_timeout(1000)
+
+    raise LiveModeError(last_error)
 
 
 def complete_manual_login(
@@ -349,7 +436,6 @@ def complete_manual_login(
     print("Log in manually in the browser window. This page will continue automatically after Instagram accepts the session.")
     wait_for_login_in_browser(
         page,
-        target_url,
         login_timeout_ms=login_timeout_ms,
         verbose=verbose,
     )
@@ -384,13 +470,187 @@ def detect_logged_in_username(page, timeout_error, *, verbose: bool = False) -> 
     if looks_logged_out(page):
         return None
 
-    locator = page.locator("input[name='username']").first
-    try:
-        locator.wait_for(state="visible", timeout=8000)
-    except timeout_error:
+    return infer_username_from_current_page(page, timeout_error=timeout_error)
+
+
+def infer_username_from_current_page(page, timeout_error=None) -> Optional[str]:
+    # Instagram changes the edit-profile form markup frequently, so we try
+    # several sources before giving up on auto-detection.
+    direct_selectors = (
+        "input[name='username']",
+        "input[autocomplete='username']",
+        "input[aria-label='Username']",
+        "input[aria-label='Имя пользователя']",
+    )
+    for selector in direct_selectors:
+        locator = page.locator(selector).first
+        try:
+            if timeout_error is not None:
+                locator.wait_for(state="visible", timeout=2500)
+        except timeout_error:
+            continue
+
+        resolved = normalize_username(locator.input_value())
+        if resolved:
+            return resolved
+
+    dom_candidates = page.evaluate(
+        """
+        () => {
+          const values = [];
+          const push = (value) => {
+            if (typeof value === "string" && value.trim()) {
+              values.push(value.trim());
+            }
+          };
+
+          [
+            "input[name='username']",
+            "input[autocomplete='username']",
+            "input[aria-label='Username']",
+            "input[aria-label='Имя пользователя']",
+          ].forEach((selector) => {
+            document.querySelectorAll(selector).forEach((node) => {
+              push(node.value || node.getAttribute("value") || "");
+            });
+          });
+
+          document.querySelectorAll("a[href]").forEach((anchor) => {
+            push(anchor.getAttribute("href") || anchor.href || "");
+          });
+
+          document.querySelectorAll("meta[content]").forEach((meta) => {
+            push(meta.getAttribute("content") || "");
+          });
+
+          return values;
+        }
+        """
+    )
+    resolved = infer_username_from_candidates(dom_candidates)
+    if resolved:
+        return resolved
+
+    return infer_username_from_html(page.content())
+
+
+def infer_username_from_candidates(raw_candidates: Iterable[str]) -> Optional[str]:
+    counts: collections.Counter[str] = collections.Counter()
+    for candidate in raw_candidates:
+        normalized = normalize_username(candidate)
+        if normalized and normalized not in RESERVED_PATH_SEGMENTS:
+            counts[normalized] += 1
+
+    if not counts:
         return None
 
-    return normalize_username(locator.input_value())
+    if len(counts) == 1:
+        return next(iter(counts))
+
+    winner, winner_count = counts.most_common(1)[0]
+    runner_up_count = counts.most_common(2)[1][1]
+    if winner_count >= 2 and winner_count > runner_up_count:
+        return winner
+
+    return None
+
+
+def infer_username_from_html(html: str) -> Optional[str]:
+    if not html:
+        return None
+
+    preferred_patterns = (
+        r'"viewer"\s*:\s*\{[^{}]{0,400}?"username"\s*:\s*"([A-Za-z0-9._]{1,30})"',
+        r'"current_user"\s*:\s*\{[^{}]{0,400}?"username"\s*:\s*"([A-Za-z0-9._]{1,30})"',
+        r'"username"\s*:\s*"([A-Za-z0-9._]{1,30})"\s*,\s*"is_private"',
+    )
+    for pattern in preferred_patterns:
+        preferred_matches = re.findall(pattern, html, flags=re.DOTALL)
+        resolved = infer_username_from_candidates(preferred_matches)
+        if resolved:
+            return resolved
+
+    candidates: list[str] = []
+    fallback_patterns = (
+        r'"username"\s*:\s*"([A-Za-z0-9._]{1,30})"',
+        r'https://www\.instagram\.com/([A-Za-z0-9._]{1,30})/',
+        r'content="/([A-Za-z0-9._]{1,30})/"',
+    )
+    for pattern in fallback_patterns:
+        candidates.extend(re.findall(pattern, html))
+
+    return infer_username_from_candidates(candidates)
+
+
+def extract_profile_avatar_url(page) -> Optional[str]:
+    candidate = page.evaluate(
+        """
+        () => {
+          const selectors = [
+            "meta[property='og:image']",
+            "meta[name='twitter:image']",
+            "header img",
+            "img[alt*='profile picture']",
+          ];
+
+          for (const selector of selectors) {
+            for (const node of document.querySelectorAll(selector)) {
+              const value =
+                node.getAttribute?.("content") ||
+                node.getAttribute?.("src") ||
+                node.src ||
+                "";
+              if (typeof value === "string" && value.startsWith("http")) {
+                return value;
+              }
+            }
+          }
+
+          return "";
+        }
+        """
+    )
+    return candidate if isinstance(candidate, str) and candidate else None
+
+
+def download_image_as_data_url(url: str) -> Optional[str]:
+    if not url.startswith("http"):
+        return None
+
+    request = urllib_request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0 Safari/537.36"
+            )
+        },
+    )
+    try:
+        with urllib_request.urlopen(request, timeout=20) as response:
+            image_bytes = response.read()
+            content_type = response.headers.get_content_type() or "image/jpeg"
+    except (OSError, urllib_error.URLError, urllib_error.HTTPError):
+        return None
+
+    if not image_bytes:
+        return None
+
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{content_type};base64,{encoded}"
+
+
+def capture_profile_avatar_data_url(page, username: str, *, verbose: bool = False) -> Optional[str]:
+    try:
+        page.goto(f"https://www.instagram.com/{username}/", wait_until="domcontentloaded")
+    except Exception:
+        return None
+
+    dismiss_known_dialogs(page, verbose=verbose)
+    avatar_url = extract_profile_avatar_url(page)
+    if not avatar_url:
+        return None
+    return download_image_as_data_url(avatar_url)
 
 
 def open_relation_dialog(
@@ -417,6 +677,10 @@ def open_relation_dialog(
             verbose=verbose,
         )
         dismiss_known_dialogs(page, verbose=verbose)
+        if looks_logged_out(page):
+            raise LiveModeError(
+                f"Instagram still requires login before opening {relation} for @{username}."
+            )
 
     try:
         dialog.wait_for(state="visible", timeout=12000)
@@ -530,12 +794,14 @@ def collect_live_relation_usernames(
         timeout_error,
         verbose=verbose,
     )
-    for attempt in range(2):
+    for attempt in range(3):
         usernames: Set[str] = set()
         stalled_rounds = 0
         previous_max_scroll_top = -1
 
         for step in range(1, max_scrolls + 1):
+            if looks_logged_out(page):
+                break
             snapshot = page.evaluate(SCROLL_TO_END_SCRIPT)
             batch = extract_live_usernames(snapshot.get("hrefs", []))
             before = len(usernames)
@@ -578,15 +844,15 @@ def collect_live_relation_usernames(
             )
             return usernames
 
-        if attempt == 0 and looks_logged_out(page):
+        if looks_logged_out(page):
             print(f"The {relation} list is blocked by Instagram login.")
             emit_progress(
                 progress_callback,
                 relation,
-                f"Instagram asked for login again while reading {relation}.",
+                f"Instagram asked for login again while reading {relation}. Finish login in the browser to continue.",
                 range_start,
             )
-            complete_manual_login(
+            ensure_logged_in(
                 page,
                 live_relation_url(username, relation),
                 terminal_prompt=terminal_prompt,
@@ -602,10 +868,16 @@ def collect_live_relation_usernames(
                 terminal_prompt=terminal_prompt,
                 login_timeout_ms=login_timeout_ms,
             )
+            wait_for_relation_entries(
+                page,
+                relation,
+                timeout_error,
+                verbose=verbose,
+            )
             continue
 
     raise LiveModeError(
-        f"The live {relation} list for @{username} did not return any usernames."
+        f"The live {relation} list for @{username} did not return any usernames. If Instagram kept asking for login, reconnect the session and try again."
     )
 
 
@@ -653,6 +925,17 @@ def analyze_live_session(
                 raise LiveModeError(
                     "Could not determine the logged-in Instagram username automatically. Pass --username explicitly."
                 )
+
+            avatar_data_url = capture_profile_avatar_data_url(
+                page,
+                resolved_username,
+                verbose=verbose,
+            )
+            save_session_profile(
+                session_dir,
+                username=resolved_username,
+                avatar_data_url=avatar_data_url,
+            )
 
             emit_progress(progress_callback, "followers", "Starting the followers scan.", 24)
             followers = collect_live_relation_usernames(
@@ -712,19 +995,32 @@ def login_only(
         )
         try:
             page = context.pages[0] if context.pages else context.new_page()
-            target_url = f"https://www.instagram.com/{username}/" if username else "https://www.instagram.com/"
             ensure_logged_in(
                 page,
-                target_url,
+                "https://www.instagram.com/",
                 terminal_prompt=terminal_prompt,
                 login_timeout_ms=login_timeout_ms,
                 verbose=verbose,
             )
-            resolved_username = username or detect_logged_in_username(
+            resolved_username = wait_for_confirmed_login(
                 page,
+                username,
                 timeout_error,
+                login_timeout_ms=login_timeout_ms,
                 verbose=verbose,
             )
+            avatar_data_url = None
+            if resolved_username:
+                avatar_data_url = capture_profile_avatar_data_url(
+                    page,
+                    resolved_username,
+                    verbose=verbose,
+                )
+                save_session_profile(
+                    session_dir,
+                    username=resolved_username,
+                    avatar_data_url=avatar_data_url,
+                )
         finally:
             context.close()
 

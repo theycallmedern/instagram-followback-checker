@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default desktop capability for the main Instagram Followback window.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:app:default",
+    "core:window:default",
+    "core:webview:default",
+    "core:path:default",
+    "core:resources:default"
+  ]
+}
