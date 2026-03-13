@@ -196,7 +196,7 @@ def capture_overview(page, output_path: Path) -> None:
     page.locator(".desktop-window").screenshot(path=str(output_path))
 
 
-def capture_results(page, output_path: Path) -> None:
+def populate_results_state(page) -> None:
     page.evaluate(
         """
         () => {
@@ -209,7 +209,86 @@ def capture_results(page, output_path: Path) -> None:
         }
         """
     )
+
+
+def capture_results(page, output_path: Path) -> None:
+    populate_results_state(page)
     page.locator(".desktop-window").screenshot(path=str(output_path))
+
+
+def capture_region(page, selectors: list[str], output_path: Path, *, padding: int = 28) -> None:
+    clip = page.evaluate(
+        """
+        ({ selectors, padding }) => {
+          const boxes = selectors.flatMap((selector) =>
+            Array.from(document.querySelectorAll(selector)).map((element) => {
+              const rect = element.getBoundingClientRect();
+              return {
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+              };
+            })
+          ).filter((box) => box.right > box.left && box.bottom > box.top);
+
+          if (!boxes.length) {
+            return null;
+          }
+
+          const left = Math.max(0, Math.min(...boxes.map((box) => box.left)) - padding);
+          const top = Math.max(0, Math.min(...boxes.map((box) => box.top)) - padding);
+          const right = Math.min(window.innerWidth, Math.max(...boxes.map((box) => box.right)) + padding);
+          const bottom = Math.min(document.documentElement.scrollHeight, Math.max(...boxes.map((box) => box.bottom)) + padding);
+
+          return {
+            x: left,
+            y: top,
+            width: Math.max(1, right - left),
+            height: Math.max(1, bottom - top),
+          };
+        }
+        """,
+        {"selectors": selectors, "padding": padding},
+    )
+    if not clip:
+        raise RuntimeError(f"Could not capture region for selectors: {selectors}")
+    page.screenshot(path=str(output_path), clip=clip)
+
+
+def capture_feature_gallery(page) -> None:
+    populate_results_state(page)
+
+    capture_region(
+        page,
+        [".window-bar", ".sidebar", ".workspace-card", ".metrics-grid"],
+        OUTPUT_DIR / "hero-workspace.png",
+        padding=14,
+    )
+    capture_region(
+        page,
+        [".nav-card"],
+        OUTPUT_DIR / "session-panel.png",
+        padding=8,
+    )
+    capture_region(
+        page,
+        [".field-stack", ".toggle-list", ".button-stack", ".action-feedback"],
+        OUTPUT_DIR / "scan-controls.png",
+        padding=18,
+    )
+    capture_region(
+        page,
+        [".table-card"],
+        OUTPUT_DIR / "results-table.png",
+        padding=18,
+    )
+    capture_region(
+        page,
+        [".inspector-card"],
+        OUTPUT_DIR / "inspector-diagnostics.png",
+        padding=18,
+    )
 
 
 def main() -> None:
@@ -235,6 +314,12 @@ def main() -> None:
             page.goto(url, wait_until="networkidle")
             time.sleep(0.25)
             capture_results(page, OUTPUT_DIR / "results.png")
+
+            page = context.new_page()
+            page.add_init_script(build_mock_script())
+            page.goto(url, wait_until="networkidle")
+            time.sleep(0.25)
+            capture_feature_gallery(page)
             context.close()
         finally:
             browser.close()

@@ -48,17 +48,35 @@ The result is a tool that feels less like a hack and more like a serious local p
 
 The screenshots below are synthetic product captures generated from the desktop UI. They do not contain real account data.
 
+<p align="center">
+  <img src="./docs/screenshots/hero-workspace.png" alt="Wide desktop hero showing the connected Instagram workspace, summary metrics, and polished product shell" width="960" />
+  <br />
+  <strong>One local workspace for connection, scanning, and review</strong>
+</p>
+
 <table>
   <tr>
     <td align="center">
-      <img src="./docs/screenshots/overview.png" alt="Desktop overview showing connected Instagram session and ready-to-scan workspace" width="460" />
+      <img src="./docs/screenshots/session-panel.png" alt="Zoomed session card showing the connected account identity and local session state" width="420" />
       <br />
-      <strong>Connect once and keep the workspace ready</strong>
+      <strong>Persistent local session identity</strong>
     </td>
     <td align="center">
-      <img src="./docs/screenshots/results.png" alt="Desktop results view showing populated metrics, relationship table, inspector, and diagnostics" width="460" />
+      <img src="./docs/screenshots/scan-controls.png" alt="Zoomed scan controls showing username, mode, sort, and action flow" width="420" />
       <br />
-      <strong>Run a scan and review the relationship picture fast</strong>
+      <strong>Fast scan setup from the desktop rail</strong>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="./docs/screenshots/results-table.png" alt="Zoomed relationship table showing live usernames, search, and profile links" width="420" />
+      <br />
+      <strong>Searchable relationship table</strong>
+    </td>
+    <td align="center">
+      <img src="./docs/screenshots/inspector-diagnostics.png" alt="Zoomed inspector and diagnostics panel showing relationship checks and warning metadata" width="420" />
+      <br />
+      <strong>Inspector and diagnostics in one place</strong>
     </td>
   </tr>
 </table>
