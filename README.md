@@ -54,32 +54,21 @@ The screenshots below are synthetic product captures generated from the desktop 
   <strong>One local workspace for connection, scanning, and review</strong>
 </p>
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="./docs/screenshots/session-panel.png" alt="Zoomed session card showing the connected account identity and local session state" width="420" />
-      <br />
-      <strong>Persistent local session identity</strong>
-    </td>
-    <td align="center">
-      <img src="./docs/screenshots/scan-controls.png" alt="Zoomed scan controls showing username, mode, sort, and action flow" width="420" />
-      <br />
-      <strong>Fast scan setup from the desktop rail</strong>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="./docs/screenshots/results-table.png" alt="Zoomed relationship table showing live usernames, search, and profile links" width="420" />
-      <br />
-      <strong>Searchable relationship table</strong>
-    </td>
-    <td align="center">
-      <img src="./docs/screenshots/inspector-diagnostics.png" alt="Zoomed inspector and diagnostics panel showing relationship checks and warning metadata" width="420" />
-      <br />
-      <strong>Inspector and diagnostics in one place</strong>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="./docs/screenshots/session-panel.png" alt="Zoomed session card showing the connected account identity and local session state" width="320" />
+  <img src="./docs/screenshots/scan-controls.png" alt="Zoomed scan controls showing username, mode, sort, and action flow" width="320" />
+</p>
+<p align="center">
+  <strong>Persistent local session identity</strong> and <strong>fast scan setup from the desktop rail</strong>
+</p>
+
+<p align="center">
+  <img src="./docs/screenshots/results-table.png" alt="Zoomed relationship table showing live usernames, search, and profile links" width="520" />
+  <img src="./docs/screenshots/inspector-diagnostics.png" alt="Zoomed inspector and diagnostics panel showing relationship checks and warning metadata" width="292" />
+</p>
+<p align="center">
+  <strong>Searchable relationship table</strong> with <strong>inspector and diagnostics in one place</strong>
+</p>
 
 ## Desktop Quick Start
 
