@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./docs/branding/readme-app-icon.png" alt="Instagram Followback app icon" width="72" align="absmiddle" />
+  <img src="./docs/branding/readme-app-icon.png" alt="Instagram Followback app icon" width="88" align="absmiddle" />
   Instagram Followback
 </h1>
 
