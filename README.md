@@ -76,6 +76,8 @@ The result is a tool that feels less like a hack and more like a serious local p
 
 If you just want to use the desktop product, download the latest release from GitHub Releases and install the bundle for your platform:
 
+- download for macOS [here](https://github.com/theycallmedern/instagram-followback-checker/releases/latest)
+- download for Windows [here](https://github.com/theycallmedern/instagram-followback-checker/releases/download/v0.3.1/Instagram.Followback_0.3.1_x64-setup.exe)
 - open `Releases`: `https://github.com/theycallmedern/instagram-followback-checker/releases`
 - on macOS, download the latest `.dmg`, move `Instagram Followback.app` into `/Applications`, and launch it
 - on Windows, download the latest installer `.exe` from the same release and run the setup flow
