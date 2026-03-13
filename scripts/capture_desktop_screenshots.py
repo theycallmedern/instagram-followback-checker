@@ -273,6 +273,12 @@ def capture_feature_gallery(page) -> None:
     )
     capture_region(
         page,
+        [".sidebar"],
+        OUTPUT_DIR / "sidebar-flow.png",
+        padding=10,
+    )
+    capture_region(
+        page,
         [".field-stack", ".toggle-list", ".button-stack", ".action-feedback"],
         OUTPUT_DIR / "scan-controls.png",
         padding=18,
@@ -282,6 +288,12 @@ def capture_feature_gallery(page) -> None:
         [".table-card"],
         OUTPUT_DIR / "results-table.png",
         padding=18,
+    )
+    capture_region(
+        page,
+        [".workspace-grid"],
+        OUTPUT_DIR / "analysis-workspace.png",
+        padding=12,
     )
     capture_region(
         page,

@@ -55,19 +55,17 @@ The screenshots below are synthetic product captures generated from the desktop 
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/session-panel.png" alt="Zoomed session card showing the connected account identity and local session state" width="320" />
-  <img src="./docs/screenshots/scan-controls.png" alt="Zoomed scan controls showing username, mode, sort, and action flow" width="320" />
+  <img src="./docs/screenshots/sidebar-flow.png" alt="Zoomed left rail showing connected session identity, scan setup, view options, and action controls" width="420" />
 </p>
 <p align="center">
-  <strong>Persistent local session identity</strong> and <strong>fast scan setup from the desktop rail</strong>
+  <strong>Persistent local session identity and fast scan setup from the desktop rail</strong>
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/results-table.png" alt="Zoomed relationship table showing live usernames, search, and profile links" width="520" />
-  <img src="./docs/screenshots/inspector-diagnostics.png" alt="Zoomed inspector and diagnostics panel showing relationship checks and warning metadata" width="292" />
+  <img src="./docs/screenshots/analysis-workspace.png" alt="Zoomed analysis area showing the relationship table next to the inspector and diagnostics panels" width="960" />
 </p>
 <p align="center">
-  <strong>Searchable relationship table</strong> with <strong>inspector and diagnostics in one place</strong>
+  <strong>Searchable relationship table, inspector, and diagnostics in one focused analysis view</strong>
 </p>
 
 ## Desktop Quick Start
