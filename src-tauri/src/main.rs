@@ -131,7 +131,10 @@ where
 
     if !output.status.success() {
         return Err(decode_stderr(&output.stderr).unwrap_or_else(|| {
-            format!("The desktop Python bridge exited with status {}.", output.status)
+            format!(
+                "The desktop Python bridge exited with status {}.",
+                output.status
+            )
         }));
     }
 
@@ -169,7 +172,11 @@ fn run_bridge_scan_command(app: &tauri::AppHandle, request: ScanRequest) -> Resu
     if request.background_scan {
         command.arg("--headless");
     }
-    if let Some(username) = request.username.as_ref().filter(|value| !value.trim().is_empty()) {
+    if let Some(username) = request
+        .username
+        .as_ref()
+        .filter(|value| !value.trim().is_empty())
+    {
         command.arg("--username").arg(username.trim());
     }
 
@@ -220,7 +227,9 @@ fn run_bridge_scan_command(app: &tauri::AppHandle, request: ScanRequest) -> Resu
         }
     }
 
-    let status = child.wait().map_err(|error| format!("Failed to wait for live scan: {error}"))?;
+    let status = child
+        .wait()
+        .map_err(|error| format!("Failed to wait for live scan: {error}"))?;
     let stderr_output = stderr_handle.join().unwrap_or_default();
 
     if !status.success() {
@@ -246,7 +255,10 @@ fn run_bridge_scan_command(app: &tauri::AppHandle, request: ScanRequest) -> Resu
     })
 }
 
-fn start_bridge_login_command(app: &tauri::AppHandle, username: Option<String>) -> Result<(), String> {
+fn start_bridge_login_command(
+    app: &tauri::AppHandle,
+    username: Option<String>,
+) -> Result<(), String> {
     let invocation = resolve_bridge_invocation(app)?;
     let mut command = Command::new(&invocation.python_bin);
     command.arg(&invocation.bridge_script).arg("login");
@@ -292,7 +304,9 @@ fn resolve_bridge_invocation(app: &tauri::AppHandle) -> Result<BridgeInvocation,
 
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .ok_or_else(|| "Failed to resolve the repository root for desktop development.".to_string())?
+        .ok_or_else(|| {
+            "Failed to resolve the repository root for desktop development.".to_string()
+        })?
         .to_path_buf();
     let bridge_script = repo_root.join("instagram_followback_desktop_bridge.py");
     if !bridge_script.exists() {
@@ -336,7 +350,9 @@ fn cleanup_login_processes_for_session(session_dir: &Path) -> Result<(), String>
                 .arg("-f")
                 .arg(&pattern)
                 .status()
-                .map_err(|error| format!("Failed to run pkill for lingering Instagram login processes: {error}"))?;
+                .map_err(|error| {
+                    format!("Failed to run pkill for lingering Instagram login processes: {error}")
+                })?;
 
             if !status.success() && status.code() != Some(1) {
                 return Err(format!(
@@ -344,6 +360,52 @@ fn cleanup_login_processes_for_session(session_dir: &Path) -> Result<(), String>
                     session_dir
                 ));
             }
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        let command = r#"
+$session = $env:IFB_SESSION_DIR
+if ([string]::IsNullOrWhiteSpace($session)) {
+  exit 0
+}
+
+$targets = Get-CimInstance Win32_Process | Where-Object {
+  $_.CommandLine -and
+  $_.CommandLine.Contains($session) -and
+  (
+    $_.CommandLine.Contains("instagram_followback_desktop_bridge.py login") -or
+    $_.CommandLine.Contains("--user-data-dir=" + $session) -or
+    $_.CommandLine.Contains("--user-data-dir=""" + $session + """")
+  )
+}
+
+foreach ($target in $targets) {
+  Stop-Process -Id $target.ProcessId -Force -ErrorAction SilentlyContinue
+}
+"#;
+
+        let status = Command::new("powershell.exe")
+            .arg("-NoProfile")
+            .arg("-NonInteractive")
+            .arg("-ExecutionPolicy")
+            .arg("Bypass")
+            .arg("-Command")
+            .arg(command)
+            .env("IFB_SESSION_DIR", session_dir)
+            .status()
+            .map_err(|error| {
+                format!(
+                    "Failed to run PowerShell cleanup for lingering Instagram login processes: {error}"
+                )
+            })?;
+
+        if !status.success() {
+            return Err(format!(
+                "Failed to clean up lingering Instagram login processes for session {}.",
+                session_dir.display()
+            ));
         }
     }
 
@@ -361,6 +423,23 @@ fn resolve_session_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 fn find_python_executable(runtime_root: &Path) -> Option<PathBuf> {
+    let direct_candidates = [
+        runtime_root.join("python.exe"),
+        runtime_root.join("python3.exe"),
+        runtime_root.join("Scripts").join("python.exe"),
+        runtime_root
+            .join("Lib")
+            .join("venv")
+            .join("scripts")
+            .join("nt")
+            .join("python.exe"),
+    ];
+    for candidate in direct_candidates {
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
     let bin_dir = runtime_root.join("bin");
     if !bin_dir.exists() {
         return None;

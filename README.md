@@ -1,6 +1,6 @@
 # Instagram Followback
 
-Instagram Followback is a local-first macOS desktop app for understanding your Instagram relationship graph with a clean, modern workflow.
+Instagram Followback is a local-first desktop app for understanding your Instagram relationship graph with a clean, modern workflow.
 
 It is designed around one strong loop:
 
@@ -28,7 +28,7 @@ The result is a tool that feels less like a hack and more like a serious local p
 
 ### What you get
 
-- native Tauri desktop shell with a focused macOS presentation
+- native Tauri desktop shell with polished macOS and Windows release builds
 - bundled Python runtime for desktop release builds
 - reusable local Instagram session between runs
 - session status with connected account identity and cached avatar
@@ -67,12 +67,12 @@ The screenshots below are synthetic product captures generated from the desktop 
 
 ### Install the released app
 
-If you just want to use the desktop product, download the latest macOS release from GitHub Releases and install the app bundle:
+If you just want to use the desktop product, download the latest release from GitHub Releases and install the bundle for your platform:
 
 - open `Releases`: `https://github.com/theycallmedern/instagram-followback-checker/releases`
-- download the latest `.dmg`
-- move `Instagram Followback.app` into `/Applications`
-- launch the app and click `Connect Instagram`
+- on macOS, download the latest `.dmg`, move `Instagram Followback.app` into `/Applications`, and launch it
+- on Windows, download the latest installer `.exe` from the same release and run the setup flow
+- open the app and click `Connect Instagram`
 
 ### Run from source
 
@@ -80,7 +80,7 @@ If you are developing locally or building the desktop app yourself:
 
 #### Requirements
 
-- macOS
+- macOS or Windows
 - Python `3.9+`
 - Node.js and npm
 - Rust and Cargo
@@ -89,7 +89,7 @@ If you are developing locally or building the desktop app yourself:
 
 ```bash
 npm install
-python3 -m pip install ".[live]"
+python -m pip install ".[live]"
 ```
 
 #### Prepare the bundled runtime
@@ -104,17 +104,25 @@ npm run desktop:prepare-runtime
 npm run desktop:dev
 ```
 
-#### Build and install the app bundle
+#### Build the desktop bundle
+
+```bash
+npm run desktop:build
+```
+
+For macOS development, you can also install the app into `/Applications`:
 
 ```bash
 npm run desktop:install
 ```
 
-The installed app is copied to:
+For Windows development on a Windows host, build the installer bundle with:
 
-```text
-/Applications/Instagram Followback.app
+```bash
+npm run desktop:build-windows
 ```
+
+If you do not have access to a Windows machine, use the GitHub Actions desktop workflow to generate Windows artifacts on `windows-latest`.
 
 ## Daily Flow
 
@@ -176,6 +184,7 @@ npm run desktop:dev
 npm run desktop:build
 npm run desktop:build-app
 npm run desktop:build-dmg
+npm run desktop:build-windows
 npm run desktop:release
 npm run desktop:install
 ```

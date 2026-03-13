@@ -4,11 +4,12 @@
   "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "desktop:prepare-runtime": "python3 scripts/prepare_desktop_runtime.py",
+    "desktop:prepare-runtime": "node scripts/run_prepare_desktop_runtime.mjs",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:build-app": "tauri build --bundles app --no-sign",
     "desktop:build-dmg": "tauri build --bundles dmg --no-sign",
+    "desktop:build-windows": "tauri build --bundles nsis --no-sign",
     "desktop:release": "tauri build --bundles app,dmg --no-sign",
     "desktop:install": "npm run desktop:build-app && bash scripts/install_desktop_app.sh",
     "desktop:icon": "tauri icon"
