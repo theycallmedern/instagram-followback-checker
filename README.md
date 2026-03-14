@@ -46,6 +46,7 @@ The result is a tool that feels less like a hack and more like a serious local p
 - session status with connected account identity and cached avatar
 - background live scans by default after connection
 - relationship modes for `Non-followers`, `Fans`, and `Mutuals`
+- local scan history with snapshot details, compare flows, and export
 - fast search, one-account inspector, and optional diagnostics
 - local-only workflow with no hosted API requirement
 
@@ -74,11 +75,10 @@ The result is a tool that feels less like a hack and more like a serious local p
 > [!TIP]
 > If you just want the desktop product, start from GitHub Releases instead of building from source.
 
-If you just want to use the desktop product, download the latest release from GitHub Releases and install the bundle for your platform:
+If you just want to use the desktop product, open the latest release on GitHub and install the bundle for your platform:
 
-- download for macOS [here](https://github.com/theycallmedern/instagram-followback-checker/releases/download/v0.3.1/Instagram.Followback_0.3.1_aarch64.dmg)
-- download for Windows [here](https://github.com/theycallmedern/instagram-followback-checker/releases/download/v0.3.1/Instagram.Followback_0.3.1_x64-setup.exe)
-- open `Releases`: `https://github.com/theycallmedern/instagram-followback-checker/releases`
+- latest release: `https://github.com/theycallmedern/instagram-followback-checker/releases/latest`
+- releases page: `https://github.com/theycallmedern/instagram-followback-checker/releases`
 - on macOS, download the latest `.dmg`, move `Instagram Followback.app` into `/Applications`, and launch it
 - on Windows, download the latest installer `.exe` from the same release and run the setup flow
 - open the app and click `Connect Instagram`

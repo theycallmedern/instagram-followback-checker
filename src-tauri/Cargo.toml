@@ -1,6 +1,6 @@
 [package]
 name = "instagram-followback-desktop"
-version = "0.3.1"
+version = "0.4.0"
 description = "Desktop shell for Instagram Followback"
 authors = ["Misha Belyakov"]
 edition = "2021"

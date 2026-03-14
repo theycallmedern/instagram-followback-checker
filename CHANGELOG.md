@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 - 2026-03-15
+
+- added local scan history snapshots after each successful desktop live scan
+- added history timeline cards, snapshot details, and compare-with-previous or compare-with-any-saved-scan flows
+- added history export in `JSON` and `CSV` plus per-account history clearing
+- restored the latest saved desktop snapshot automatically after relaunch so the workspace no longer comes back empty
+- rebuilt saved reports live from `Mode`, `Sort`, `Limit`, and `Summary only` controls without requiring a fresh scan
+- tightened the desktop bridge and Tauri commands around history loading, exporting, clearing, and saved report hydration
+
 ## 0.3.1 - 2026-03-14
 
 - refined the desktop Instagram connect flow after the 0.3.0 product polish release

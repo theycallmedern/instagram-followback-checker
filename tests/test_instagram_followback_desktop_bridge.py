@@ -6,7 +6,18 @@ import sqlite3
 from unittest import mock
 
 from instagram_followback_checker import AnalysisResult
-from instagram_followback_desktop_bridge import build_report_payload, run_login, session_status_payload
+from instagram_followback_desktop_bridge import (
+    clear_history_entries,
+    build_history_detail_payload,
+    build_history_payload,
+    build_report_payload,
+    build_report_payload_from_entry,
+    export_history_entries,
+    load_history_entries,
+    run_login,
+    save_history_snapshot,
+    session_status_payload,
+)
 from instagram_followback_live import save_login_state, save_session_profile, save_session_username
 
 
@@ -32,11 +43,290 @@ class InstagramFollowbackDesktopBridgeTests(unittest.TestCase):
 
         self.assertEqual(payload["scan_username"], "demo_user")
         self.assertEqual(payload["mode"], "nonfollowers")
+        self.assertEqual(payload["report_source"], "live")
+        self.assertTrue(payload["snapshot_id"])
         self.assertEqual(payload["total_matches"], 2)
         self.assertEqual(payload["shown_matches"], 1)
         self.assertEqual(payload["entries"][0]["username"], "li")
         self.assertIn("amy", payload["followers_usernames"])
         self.assertIn("zoe", payload["following_usernames"])
+
+    def test_build_history_payload_includes_latest_snapshot_and_changes(self):
+        first_result = AnalysisResult(
+            followers={"amy", "mila"},
+            following={"amy", "zoe"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+        second_result = AnalysisResult(
+            followers={"amy", "li"},
+            following={"amy", "zoe", "nova"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=first_result,
+            )
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-two",
+                scan_username="demo_user",
+                created_at="2026-03-14T10:00:00Z",
+                result=second_result,
+            )
+
+            payload = build_history_payload(session_dir, username="demo_user")
+
+        self.assertEqual(payload["username"], "demo_user")
+        self.assertEqual(len(payload["entries"]), 2)
+        self.assertEqual(payload["entries"][0]["snapshot_id"], "snapshot-two")
+        self.assertEqual(payload["entries"][1]["snapshot_id"], "snapshot-one")
+        self.assertEqual(payload["changes"]["new_nonfollowers"], ["nova"])
+        self.assertEqual(payload["changes"]["returned_mutuals"], [])
+        self.assertEqual(payload["changes"]["disappeared_fans"], ["mila"])
+
+    def test_build_history_detail_payload_returns_snapshot_lists_and_previous_compare(self):
+        first_result = AnalysisResult(
+            followers={"amy", "mila"},
+            following={"amy", "zoe"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+        second_result = AnalysisResult(
+            followers={"amy", "li"},
+            following={"amy", "zoe", "nova"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=first_result,
+            )
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-two",
+                scan_username="demo_user",
+                created_at="2026-03-14T10:00:00Z",
+                result=second_result,
+            )
+
+            payload = build_history_detail_payload(
+                session_dir,
+                username="demo_user",
+                snapshot_id="snapshot-two",
+            )
+
+        self.assertEqual(payload["snapshot"]["snapshot_id"], "snapshot-two")
+        self.assertEqual(payload["previous_snapshot"]["snapshot_id"], "snapshot-one")
+        self.assertEqual(payload["snapshot"]["mode_lists"]["nonfollowers"], ["nova", "zoe"])
+        self.assertEqual(payload["snapshot"]["mode_lists"]["fans"], ["li"])
+        self.assertEqual(payload["snapshot"]["mode_lists"]["mutuals"], ["amy"])
+        self.assertEqual(payload["changes"]["new_nonfollowers"], ["nova"])
+        self.assertEqual(payload["changes"]["disappeared_fans"], ["mila"])
+
+    def test_build_history_detail_payload_supports_custom_comparison_snapshot(self):
+        first_result = AnalysisResult(
+            followers={"amy", "mila"},
+            following={"amy", "zoe"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+        second_result = AnalysisResult(
+            followers={"amy", "mila", "li"},
+            following={"amy", "zoe", "nova"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+        third_result = AnalysisResult(
+            followers={"amy", "li"},
+            following={"amy", "li", "zoe", "nova", "ivy"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-12T10:00:00Z",
+                result=first_result,
+            )
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-two",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=second_result,
+            )
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-three",
+                scan_username="demo_user",
+                created_at="2026-03-14T10:00:00Z",
+                result=third_result,
+            )
+
+            payload = build_history_detail_payload(
+                session_dir,
+                username="demo_user",
+                snapshot_id="snapshot-three",
+                compare_snapshot_id="snapshot-one",
+            )
+
+        self.assertEqual(payload["comparison_mode"], "custom")
+        self.assertEqual(payload["snapshot"]["snapshot_id"], "snapshot-three")
+        self.assertEqual(payload["comparison_snapshot"]["snapshot_id"], "snapshot-one")
+        self.assertEqual(payload["changes"]["new_nonfollowers"], ["ivy", "nova"])
+        self.assertEqual(payload["changes"]["returned_mutuals"], ["li"])
+        self.assertEqual(payload["changes"]["disappeared_fans"], ["mila"])
+        self.assertEqual(len(payload["available_comparisons"]), 2)
+
+    def test_clear_history_entries_only_removes_selected_account(self):
+        result = AnalysisResult(
+            followers={"amy"},
+            following={"amy", "zoe"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=result,
+            )
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-two",
+                scan_username="other_user",
+                created_at="2026-03-14T10:00:00Z",
+                result=result,
+            )
+
+            removed = clear_history_entries(session_dir, username="demo_user")
+            remaining_demo = build_history_payload(session_dir, username="demo_user")
+            remaining_other = build_history_payload(session_dir, username="other_user")
+
+        self.assertEqual(removed, 1)
+        self.assertEqual(remaining_demo["entries"], [])
+        self.assertEqual(len(remaining_other["entries"]), 1)
+        self.assertEqual(remaining_other["entries"][0]["snapshot_id"], "snapshot-two")
+
+    def test_export_history_entries_writes_json_and_csv(self):
+        result = AnalysisResult(
+            followers={"amy"},
+            following={"amy", "zoe"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=result,
+            )
+
+            json_path = Path(temp_dir) / "history.json"
+            csv_path = Path(temp_dir) / "history.csv"
+            json_payload = export_history_entries(
+                session_dir,
+                username="demo_user",
+                export_format="json",
+                output_path=json_path,
+            )
+            csv_payload = export_history_entries(
+                session_dir,
+                username="demo_user",
+                export_format="csv",
+                output_path=csv_path,
+            )
+
+            json_text = json_path.read_text(encoding="utf-8")
+            csv_text = csv_path.read_text(encoding="utf-8")
+
+        self.assertEqual(json_payload["exported_entries"], 1)
+        self.assertIn('"snapshot_id": "snapshot-one"', json_text)
+        self.assertIn('"nonfollowers": [', json_text)
+        self.assertEqual(csv_payload["exported_entries"], 1)
+        self.assertIn("snapshot_id,created_at,followers,following,nonfollowers,fans,mutuals,warning_count", csv_text)
+        self.assertIn("snapshot-one,2026-03-13T10:00:00Z,1,2,1,0,1,0", csv_text)
+
+    def test_build_report_payload_from_entry_restores_saved_snapshot_stats(self):
+        result = AnalysisResult(
+            followers={"amy", "mila"},
+            following={"amy", "zoe", "li"},
+            follower_files=["live-instagram://demo/followers"],
+            following_files=["live-instagram://demo/following"],
+            follower_timestamps=[],
+            following_timestamps=[],
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "live-session"
+            save_history_snapshot(
+                session_dir,
+                snapshot_id="snapshot-one",
+                scan_username="demo_user",
+                created_at="2026-03-13T10:00:00Z",
+                result=result,
+            )
+            entry = load_history_entries(session_dir, username="demo_user", limit=1)[0]
+            payload = build_report_payload_from_entry(
+                entry=entry,
+                mode="nonfollowers",
+                sort_mode="alpha",
+                limit=None,
+                stats_only=False,
+            )
+
+        self.assertEqual(payload["snapshot_id"], "snapshot-one")
+        self.assertEqual(payload["scan_username"], "demo_user")
+        self.assertEqual(payload["report_source"], "history")
+        self.assertEqual(payload["stats"]["followers"], 2)
+        self.assertEqual(payload["stats"]["following"], 3)
+        self.assertEqual(payload["stats"]["nonfollowers"], 2)
+        self.assertEqual(payload["entries"][0]["username"], "li")
+        self.assertEqual(payload["entries"][1]["username"], "zoe")
 
     def test_session_status_payload_without_session(self):
         with TemporaryDirectory() as temp_dir:

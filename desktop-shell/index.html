@@ -194,6 +194,7 @@
       .sidebar {
         min-height: 0;
         overflow: auto;
+        min-width: 0;
         padding: 18px;
         display: grid;
         gap: 14px;
@@ -207,6 +208,7 @@
       .workspace {
         min-height: 0;
         overflow: auto;
+        min-width: 0;
         padding: 18px;
         display: grid;
         gap: 16px;
@@ -594,6 +596,8 @@
         color: var(--muted);
         font-size: 12px;
         line-height: 1.5;
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
       #statusText {
@@ -606,6 +610,7 @@
         color: #7f90b0;
         font-size: 12px;
         line-height: 1.5;
+        overflow-wrap: anywhere;
         word-break: break-word;
       }
 
@@ -613,6 +618,7 @@
         display: grid;
         gap: 10px;
         align-content: start;
+        min-width: 0;
       }
 
       .workspace-card {
@@ -750,6 +756,13 @@
         gap: 16px;
         min-height: 0;
         align-items: start;
+      }
+
+      .workspace-main {
+        display: grid;
+        gap: 16px;
+        min-width: 0;
+        align-content: start;
       }
 
       .table-card,
@@ -1029,6 +1042,314 @@
         max-width: 28ch;
       }
 
+      .history-card {
+        display: grid;
+        gap: 16px;
+      }
+
+      .history-card .panel-header p {
+        max-width: 52ch;
+      }
+
+      .history-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .history-actions button {
+        min-width: 124px;
+        height: 40px;
+        padding: 0 14px;
+        font-size: 12px;
+      }
+
+      .history-delta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .history-delta-card {
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top right, rgba(117, 231, 227, 0.07), transparent 36%),
+          radial-gradient(circle at bottom left, rgba(101, 184, 255, 0.06), transparent 32%),
+          rgba(18, 28, 42, 0.82);
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        min-height: 166px;
+      }
+
+      .history-delta-card small,
+      .history-row-copy small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .history-delta-card strong {
+        font-size: 28px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .history-preview,
+      .history-row-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .history-preview a,
+      .history-preview span,
+      .history-row-metrics span,
+      .history-warning-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(174, 193, 229, 0.16);
+        background: rgba(17, 25, 38, 0.74);
+        color: var(--muted-strong);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .history-latest-badge {
+        border-color: rgba(116, 230, 218, 0.24);
+        background: rgba(24, 74, 68, 0.42);
+        color: #c8fff4;
+      }
+
+      .history-selected-badge {
+        border-color: rgba(101, 184, 255, 0.24);
+        background: rgba(21, 52, 84, 0.42);
+        color: #d6ecff;
+      }
+
+      .history-preview a:hover {
+        text-decoration: none;
+        border-color: rgba(116, 230, 218, 0.32);
+      }
+
+      .history-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .history-row {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.06), rgba(255, 255, 255, 0)),
+          rgba(17, 25, 38, 0.78);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        width: 100%;
+        height: auto;
+        text-align: left;
+      }
+
+      .history-row:hover:enabled {
+        transform: none;
+        border-color: rgba(116, 230, 218, 0.24);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.08), rgba(117, 231, 227, 0.04)),
+          rgba(18, 29, 43, 0.88);
+      }
+
+      .history-row.is-selected {
+        border-color: rgba(116, 230, 218, 0.32);
+        box-shadow: 0 0 0 1px rgba(116, 230, 218, 0.12) inset;
+      }
+
+      .history-row-copy {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .history-row-copy strong {
+        font-size: 15px;
+        letter-spacing: -0.02em;
+      }
+
+      .history-row-copy p,
+      .history-preview-empty,
+      .history-empty {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .history-warning-badge {
+        border-color: rgba(255, 208, 145, 0.2);
+        background: rgba(76, 50, 19, 0.42);
+        color: #ffe6c1;
+      }
+
+      .history-detail {
+        display: grid;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top right, rgba(255, 142, 103, 0.06), transparent 38%),
+          radial-gradient(circle at bottom left, rgba(101, 184, 255, 0.05), transparent 34%),
+          rgba(18, 27, 40, 0.82);
+      }
+
+      .history-detail-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .history-detail-header h3,
+      .history-detail-section h4 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+      }
+
+      .history-detail-header p,
+      .history-detail-section p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .history-detail-meta,
+      .history-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .history-detail-meta span,
+      .history-chip-list span,
+      .history-chip-list a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(174, 193, 229, 0.16);
+        background: rgba(15, 23, 35, 0.7);
+        color: var(--muted-strong);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .history-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .history-detail-stat {
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.06), rgba(255, 255, 255, 0)),
+          rgba(16, 24, 36, 0.78);
+        display: grid;
+        gap: 6px;
+      }
+
+      .history-detail-stat small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .history-detail-stat strong {
+        font-size: 28px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .history-detail-section {
+        display: grid;
+        gap: 10px;
+      }
+
+      .history-compare-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .history-compare-row label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .history-compare-row select {
+        width: min(100%, 320px);
+        height: 40px;
+        font-size: 13px;
+      }
+
+      .history-detail-columns {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .history-detail-column {
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(135deg, rgba(101, 184, 255, 0.04), rgba(255, 255, 255, 0)),
+          rgba(15, 23, 35, 0.72);
+      }
+
+      .history-detail-column small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .history-detail-empty {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
       @media (max-width: 1280px) {
         .app-shell {
           grid-template-columns: 290px minmax(0, 1fr);
@@ -1040,6 +1361,23 @@
 
         .workspace-grid {
           grid-template-columns: 1fr;
+        }
+
+        .history-delta-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .history-detail-grid,
+        .history-detail-columns {
+          grid-template-columns: 1fr;
+        }
+
+        .history-detail-header {
+          display: grid;
+        }
+
+        .history-compare-row {
+          display: grid;
         }
 
         .inspector-card {
@@ -1088,13 +1426,15 @@
         .table-header,
         .panel-header,
         .table-status,
-        .inspect-form-row {
+        .inspect-form-row,
+        .history-row {
           grid-template-columns: 1fr;
           display: grid;
         }
 
         .panel-header p,
-        .inspect-result p {
+        .inspect-result p,
+        .history-card .panel-header p {
           max-width: none;
         }
 
@@ -1136,7 +1476,7 @@
       </header>
 
       <div class="app-shell">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebarPanel">
           <section class="nav-card">
             <div class="sidebar-kicker">Current session</div>
             <div class="identity-row">
@@ -1230,7 +1570,7 @@
           </section>
         </aside>
 
-        <main class="workspace">
+        <main class="workspace" id="workspacePanel">
           <section class="workspace-card">
             <div class="panel-kicker">Workspace</div>
             <div>
@@ -1264,42 +1604,82 @@
           </section>
 
           <section class="workspace-grid">
-            <section class="table-card">
-              <div class="table-header">
-                <div>
-                  <div class="panel-kicker">Relationship table</div>
-                  <h2>Live usernames</h2>
+            <div class="workspace-main">
+              <section class="table-card">
+                <div class="table-header">
+                  <div>
+                    <div class="panel-kicker">Relationship table</div>
+                    <h2>Live usernames</h2>
+                  </div>
+                  <label class="search-shell" for="searchInput">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="7"></circle>
+                      <path d="M20 20l-3.5-3.5"></path>
+                    </svg>
+                    <input id="searchInput" type="text" placeholder="Search usernames in the current table" />
+                  </label>
                 </div>
-                <label class="search-shell" for="searchInput">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <path d="M20 20l-3.5-3.5"></path>
-                  </svg>
-                  <input id="searchInput" type="text" placeholder="Search usernames in the current table" />
-                </label>
-              </div>
 
-              <div class="table-status">
-                <span id="visibleCount">Showing 0 usernames</span>
-              </div>
+                <div class="table-status">
+                  <span id="visibleCount">Showing 0 usernames</span>
+                </div>
 
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Username</th>
-                      <th>Profile</th>
-                    </tr>
-                  </thead>
-                  <tbody id="resultsBody">
-                    <tr>
-                      <td colspan="3" class="empty-state">Run your first desktop scan to populate the workspace.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Profile</th>
+                      </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                      <tr>
+                        <td colspan="3" class="empty-state">Run your first desktop scan to populate the workspace.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="workspace-card history-card">
+                <div class="panel-header">
+                  <div>
+                    <div class="panel-kicker">History</div>
+                    <h2>Saved scan timeline</h2>
+                    <p id="historySubtitle">The desktop app will keep local scan snapshots here after each successful live scan.</p>
+                  </div>
+                  <div class="history-actions">
+                    <button id="exportHistoryJsonButton">Export JSON</button>
+                    <button id="exportHistoryCsvButton">Export CSV</button>
+                    <button id="clearHistoryButton" class="button-danger">Clear history</button>
+                  </div>
+                </div>
+                <div class="history-delta-grid" id="historyDeltaGrid">
+                  <article class="history-delta-card">
+                    <small>New non-followers</small>
+                    <strong>0</strong>
+                    <p class="history-preview-empty">Run two scans to start seeing account-level changes here.</p>
+                  </article>
+                  <article class="history-delta-card">
+                    <small>Back to mutuals</small>
+                    <strong>0</strong>
+                    <p class="history-preview-empty">The desktop app compares the latest scan with the previous saved snapshot.</p>
+                  </article>
+                  <article class="history-delta-card">
+                    <small>Removed from fans</small>
+                    <strong>0</strong>
+                    <p class="history-preview-empty">Saved snapshots stay local on your machine.</p>
+                  </article>
+                </div>
+                <div class="history-list" id="historyList">
+                  <div class="history-empty">Run your first desktop scan to start a local timeline for this account.</div>
+                </div>
+                <div class="history-detail" id="historyDetail">
+                  <p class="history-detail-empty">Pick a saved snapshot to inspect its stats, warnings, and changes versus the previous scan.</p>
+                </div>
+              </section>
+            </div>
 
             <aside class="inspector-card">
               <section class="inspector-stack">
@@ -1350,6 +1730,11 @@
       const state = {
         session: { connected: false, username: null },
         report: null,
+        history: null,
+        historyDetail: null,
+        selectedHistorySnapshotId: null,
+        compareHistorySnapshotId: null,
+        historyDetailExpanded: false,
         progressUnlisten: null,
         busy: false,
         connectPollTimer: null,
@@ -1398,7 +1783,420 @@
         statNonfollowers: document.getElementById("statNonfollowers"),
         statFans: document.getElementById("statFans"),
         statMutuals: document.getElementById("statMutuals"),
+        historySubtitle: document.getElementById("historySubtitle"),
+        historyDeltaGrid: document.getElementById("historyDeltaGrid"),
+        historyList: document.getElementById("historyList"),
+        historyDetail: document.getElementById("historyDetail"),
+        exportHistoryJsonButton: document.getElementById("exportHistoryJsonButton"),
+        exportHistoryCsvButton: document.getElementById("exportHistoryCsvButton"),
+        clearHistoryButton: document.getElementById("clearHistoryButton"),
+        sidebarPanel: document.getElementById("sidebarPanel"),
+        workspacePanel: document.getElementById("workspacePanel"),
       };
+
+      function emptyHistoryState(username = null) {
+        return {
+          username,
+          entries: [],
+          changes: {
+            new_nonfollowers: [],
+            returned_mutuals: [],
+            disappeared_fans: [],
+          },
+          latest_snapshot_id: null,
+          previous_snapshot_id: null,
+        };
+      }
+
+      function emptyHistoryDetailState(username = null) {
+        return {
+          username,
+          snapshot: null,
+          previous_snapshot: null,
+          comparison_snapshot: null,
+          comparison_mode: "previous",
+          available_comparisons: [],
+          changes: {
+            new_nonfollowers: [],
+            returned_mutuals: [],
+            disappeared_fans: [],
+          },
+        };
+      }
+
+      function selectedHistoryEntry() {
+        if (!state.history?.entries?.length || !state.selectedHistorySnapshotId) {
+          return null;
+        }
+        return state.history.entries.find((entry) => entry.snapshot_id === state.selectedHistorySnapshotId) || null;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[character]));
+      }
+
+      function normalizeUsername(value) {
+        return String(value ?? "").trim().toLowerCase().replace(/^@+/, "") || null;
+      }
+
+      function profileUrlFor(username) {
+        return `https://www.instagram.com/${encodeURIComponent(username)}/`;
+      }
+
+      function formatHistoryTimestamp(value) {
+        if (!value) {
+          return "Unknown time";
+        }
+
+        const timestamp = new Date(value);
+        if (Number.isNaN(timestamp.getTime())) {
+          return value;
+        }
+
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(timestamp);
+      }
+
+      function effectiveHistoryUsername() {
+        return normalizeUsername(
+          state.report?.scan_username
+          || state.session?.username
+          || els.usernameInput.value
+        );
+      }
+
+      function renderHistoryPreview(usernames, emptyCopy) {
+        if (!Array.isArray(usernames) || !usernames.length) {
+          return `<p class="history-preview-empty">${escapeHtml(emptyCopy)}</p>`;
+        }
+
+        const items = usernames.slice(0, 4).map((username) => `
+          <a href="${profileUrlFor(username)}" target="_blank" rel="noreferrer">@${escapeHtml(username)}</a>
+        `).join("");
+        const overflow = usernames.length > 4
+          ? `<span>+${usernames.length - 4} more</span>`
+          : "";
+        return `<div class="history-preview">${items}${overflow}</div>`;
+      }
+
+      function renderChipList(usernames, emptyCopy, limit = 18) {
+        if (!Array.isArray(usernames) || !usernames.length) {
+          return `<p class="history-detail-empty">${escapeHtml(emptyCopy)}</p>`;
+        }
+
+        const items = usernames.slice(0, limit).map((username) => `
+          <a href="${profileUrlFor(username)}" target="_blank" rel="noreferrer">@${escapeHtml(username)}</a>
+        `).join("");
+        const overflow = usernames.length > limit
+          ? `<span>+${usernames.length - limit} more</span>`
+          : "";
+        return `<div class="history-chip-list">${items}${overflow}</div>`;
+      }
+
+      function renderTextChipList(items, emptyCopy, limit = 12) {
+        if (!Array.isArray(items) || !items.length) {
+          return `<p class="history-detail-empty">${escapeHtml(emptyCopy)}</p>`;
+        }
+
+        const chips = items.slice(0, limit).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+        const overflow = items.length > limit
+          ? `<span>+${items.length - limit} more</span>`
+          : "";
+        return `<div class="history-chip-list">${chips}${overflow}</div>`;
+      }
+
+      function renderHistoryDetail(detailPayload) {
+        const detail = detailPayload && typeof detailPayload === "object"
+          ? {
+            ...emptyHistoryDetailState(detailPayload.username || null),
+            ...detailPayload,
+            available_comparisons: Array.isArray(detailPayload.available_comparisons)
+              ? detailPayload.available_comparisons
+              : [],
+            changes: {
+              ...emptyHistoryDetailState().changes,
+              ...(detailPayload.changes || {}),
+            },
+          }
+          : emptyHistoryDetailState();
+
+        state.historyDetail = detail;
+        state.selectedHistorySnapshotId = detail.snapshot?.snapshot_id || state.selectedHistorySnapshotId;
+        state.compareHistorySnapshotId = detail.comparison_snapshot?.snapshot_id || null;
+
+        if (!state.historyDetailExpanded) {
+          const selectedEntry = selectedHistoryEntry();
+          if (selectedEntry) {
+            els.historyDetail.innerHTML = `
+              <p class="history-detail-empty">
+                Snapshot ${escapeHtml(String(selectedEntry.snapshot_id || "").slice(0, 8))} selected.
+                Click the row again to open its details.
+              </p>
+            `;
+          } else {
+            els.historyDetail.innerHTML = '<p class="history-detail-empty">Pick a saved snapshot to inspect its stats, warnings, and changes versus the previous scan.</p>';
+          }
+          return;
+        }
+
+        if (!detail.snapshot) {
+          els.historyDetail.innerHTML = '<p class="history-detail-empty">Pick a saved snapshot to inspect its stats, warnings, and changes versus the previous scan.</p>';
+          return;
+        }
+
+        const snapshot = detail.snapshot;
+        const comparison = detail.comparison_snapshot;
+        const compareCopy = comparison
+          ? `Compared with ${escapeHtml(formatHistoryTimestamp(comparison.created_at))}.`
+          : "No comparison snapshot is selected yet.";
+        const comparisonOptions = detail.available_comparisons.length
+          ? detail.available_comparisons.map((entry) => `
+            <option value="${escapeHtml(entry.snapshot_id)}" ${entry.snapshot_id === state.compareHistorySnapshotId ? "selected" : ""}>
+              ${escapeHtml(formatHistoryTimestamp(entry.created_at))} · NF ${Number(entry.stats?.nonfollowers ?? 0)} · Fans ${Number(entry.stats?.fans ?? 0)} · Mutuals ${Number(entry.stats?.mutuals ?? 0)}
+            </option>
+          `).join("")
+          : '<option value="">No other snapshots yet</option>';
+
+        els.historyDetail.innerHTML = `
+          <div class="history-detail-header">
+            <div>
+              <h3>@${escapeHtml(snapshot.username)} snapshot details</h3>
+              <p>${escapeHtml(formatHistoryTimestamp(snapshot.created_at))} · Snapshot ${escapeHtml(snapshot.snapshot_id).slice(0, 8)} · ${compareCopy}</p>
+            </div>
+            <div class="history-detail-meta">
+              <span>Followers ${Number(snapshot.stats?.followers ?? 0)}</span>
+              <span>Following ${Number(snapshot.stats?.following ?? 0)}</span>
+              ${snapshot.has_warnings ? `<span class="history-warning-badge">${Number(snapshot.warning_count ?? 0)} warning${Number(snapshot.warning_count ?? 0) === 1 ? "" : "s"}</span>` : ""}
+            </div>
+          </div>
+
+          <div class="history-detail-grid">
+            <article class="history-detail-stat">
+              <small>Non-followers</small>
+              <strong>${Number(snapshot.stats?.nonfollowers ?? 0)}</strong>
+            </article>
+            <article class="history-detail-stat">
+              <small>Fans</small>
+              <strong>${Number(snapshot.stats?.fans ?? 0)}</strong>
+            </article>
+            <article class="history-detail-stat">
+              <small>Mutuals</small>
+              <strong>${Number(snapshot.stats?.mutuals ?? 0)}</strong>
+            </article>
+          </div>
+
+          <section class="history-detail-section">
+            <div class="history-compare-row">
+              <label for="historyCompareSelect">Compare with</label>
+              <select id="historyCompareSelect" ${detail.available_comparisons.length ? "" : "disabled"}>
+                ${comparisonOptions}
+              </select>
+            </div>
+          </section>
+
+          <section class="history-detail-section">
+            <h4>Changes vs comparison snapshot</h4>
+            <p>${comparison
+              ? (detail.comparison_mode === "custom"
+                ? "These are the account-level deltas between the selected snapshot and the comparison snapshot you chose."
+                : "These are the account-level deltas between the selected snapshot and the previous saved one.")
+              : "Run one more scan to unlock account-level comparisons for this timeline."}</p>
+            <div class="history-detail-columns">
+              <div class="history-detail-column">
+                <small>New non-followers</small>
+                ${renderChipList(detail.changes.new_nonfollowers, "No new non-followers in this comparison.", 12)}
+              </div>
+              <div class="history-detail-column">
+                <small>Back to mutuals</small>
+                ${renderChipList(detail.changes.returned_mutuals, "No accounts returned to mutuals here.", 12)}
+              </div>
+              <div class="history-detail-column">
+                <small>Removed from fans</small>
+                ${renderChipList(detail.changes.disappeared_fans, "No fan removals in this comparison.", 12)}
+              </div>
+            </div>
+          </section>
+
+          <section class="history-detail-section">
+            <h4>Snapshot lists</h4>
+            <p>These lists belong to the selected saved snapshot, not necessarily the current live report on screen.</p>
+            <div class="history-detail-columns">
+              <div class="history-detail-column">
+                <small>Non-followers</small>
+                ${renderChipList(snapshot.mode_lists?.nonfollowers || [], "No non-followers in this saved snapshot.")}
+              </div>
+              <div class="history-detail-column">
+                <small>Fans</small>
+                ${renderChipList(snapshot.mode_lists?.fans || [], "No fans in this saved snapshot.")}
+              </div>
+              <div class="history-detail-column">
+                <small>Mutuals</small>
+                ${renderChipList(snapshot.mode_lists?.mutuals || [], "No mutuals in this saved snapshot.")}
+              </div>
+            </div>
+          </section>
+
+          <section class="history-detail-section">
+            <h4>Warnings</h4>
+            ${renderTextChipList(snapshot.warnings || [], "No warnings were stored for this snapshot.", 8)}
+          </section>
+        `;
+      }
+
+      function renderHistory(historyPayload) {
+        const history = historyPayload && typeof historyPayload === "object"
+          ? {
+            ...emptyHistoryState(historyPayload.username || null),
+            ...historyPayload,
+            entries: Array.isArray(historyPayload.entries) ? historyPayload.entries : [],
+            changes: {
+              ...emptyHistoryState().changes,
+              ...(historyPayload.changes || {}),
+            },
+          }
+          : emptyHistoryState();
+
+        state.history = history;
+        const visibleSnapshotIds = new Set(history.entries.map((entry) => entry.snapshot_id));
+        if (!visibleSnapshotIds.has(state.selectedHistorySnapshotId)) {
+          state.selectedHistorySnapshotId = null;
+          state.compareHistorySnapshotId = null;
+          state.historyDetailExpanded = false;
+        }
+
+        const accountLabel = history.username ? `@${history.username}` : "this account";
+        els.historySubtitle.textContent = history.entries.length
+          ? `Saved local snapshots for ${accountLabel}. Every successful desktop scan adds one more checkpoint to compare against.`
+          : "The desktop app will keep local scan snapshots here after each successful live scan.";
+
+        els.historyDeltaGrid.innerHTML = [
+          {
+            label: "New non-followers",
+            count: history.changes.new_nonfollowers.length,
+            preview: renderHistoryPreview(
+              history.changes.new_nonfollowers,
+              "Run two scans to start seeing which accounts became non-followers."
+            ),
+          },
+          {
+            label: "Back to mutuals",
+            count: history.changes.returned_mutuals.length,
+            preview: renderHistoryPreview(
+              history.changes.returned_mutuals,
+              "Accounts that return to mutuals will appear here after the next saved comparison."
+            ),
+          },
+          {
+            label: "Removed from fans",
+            count: history.changes.disappeared_fans.length,
+            preview: renderHistoryPreview(
+              history.changes.disappeared_fans,
+              "This shows accounts that were fans in the previous snapshot but no longer are."
+            ),
+          },
+        ].map((card) => `
+          <article class="history-delta-card">
+            <small>${escapeHtml(card.label)}</small>
+            <strong>${card.count}</strong>
+            ${card.preview}
+          </article>
+        `).join("");
+
+        els.historyList.innerHTML = history.entries.length
+          ? history.entries.map((entry) => `
+            <button type="button" class="history-row ${entry.snapshot_id === state.selectedHistorySnapshotId ? "is-selected" : ""}" data-snapshot-id="${escapeHtml(entry.snapshot_id || "")}">
+              <div class="history-row-copy">
+                <small>${escapeHtml(formatHistoryTimestamp(entry.created_at))}</small>
+                <strong>@${escapeHtml(entry.username || history.username || "instagram")}</strong>
+                <p>Snapshot ${escapeHtml(entry.snapshot_id || "").slice(0, 8)}</p>
+              </div>
+              <div class="history-row-metrics">
+                ${entry.snapshot_id === history.latest_snapshot_id ? '<span class="history-latest-badge">Latest</span>' : ""}
+                ${entry.snapshot_id === state.selectedHistorySnapshotId ? '<span class="history-selected-badge">Selected</span>' : ""}
+                <span>NF ${Number(entry.stats?.nonfollowers ?? 0)}</span>
+                <span>Fans ${Number(entry.stats?.fans ?? 0)}</span>
+                <span>Mutuals ${Number(entry.stats?.mutuals ?? 0)}</span>
+                ${entry.has_warnings ? `<span class="history-warning-badge">${Number(entry.warning_count ?? 0)} warning${Number(entry.warning_count ?? 0) === 1 ? "" : "s"}</span>` : ""}
+              </div>
+            </button>
+          `).join("")
+          : '<div class="history-empty">Run your first desktop scan to start a local timeline for this account.</div>';
+
+        if (!history.entries.length) {
+          state.selectedHistorySnapshotId = null;
+          state.compareHistorySnapshotId = null;
+          state.historyDetailExpanded = false;
+          renderHistoryDetail(emptyHistoryDetailState(history.username));
+          return;
+        }
+
+        if (!state.selectedHistorySnapshotId) {
+          renderHistoryDetail(emptyHistoryDetailState(history.username));
+          return;
+        }
+
+        const needsDetailRefresh = state.historyDetail?.snapshot?.snapshot_id !== state.selectedHistorySnapshotId
+          || state.historyDetail?.username !== history.username
+          || (state.historyDetail?.comparison_snapshot?.snapshot_id || null) !== (state.compareHistorySnapshotId || null);
+        if (state.historyDetailExpanded && needsDetailRefresh) {
+          void refreshHistoryDetail(history.username, state.selectedHistorySnapshotId, state.compareHistorySnapshotId);
+          return;
+        }
+
+        renderHistoryDetail(state.historyDetail || emptyHistoryDetailState(history.username));
+      }
+
+      async function refreshHistory(username = effectiveHistoryUsername()) {
+        const normalized = normalizeUsername(username);
+        if (!normalized) {
+          const empty = emptyHistoryState();
+          renderHistory(empty);
+          return empty;
+        }
+
+        try {
+          const history = await call("get_scan_history", { username: normalized });
+          renderHistory(history);
+          return history;
+        } catch (error) {
+          setDebug(`refreshHistory: ${String(error)}`);
+          const empty = emptyHistoryState(normalized);
+          renderHistory(empty);
+          return empty;
+        }
+      }
+
+      async function refreshHistoryDetail(
+        username = effectiveHistoryUsername(),
+        snapshotId = state.selectedHistorySnapshotId,
+        compareSnapshotId = state.compareHistorySnapshotId,
+      ) {
+        const normalized = normalizeUsername(username);
+        if (!normalized || !snapshotId || !state.historyDetailExpanded) {
+          renderHistoryDetail(emptyHistoryDetailState(normalized));
+          return;
+        }
+
+        try {
+          const detail = await call("get_scan_history_detail", {
+            username: normalized,
+            snapshotId,
+            compareSnapshotId,
+          });
+          renderHistoryDetail(detail);
+        } catch (error) {
+          setDebug(`refreshHistoryDetail: ${String(error)}`);
+          renderHistoryDetail(emptyHistoryDetailState(normalized));
+        }
+      }
 
       function sessionCanScan(session = state.session) {
         return Boolean(session.connected || session.authenticated_cookie_present);
@@ -1413,6 +2211,9 @@
         els.connectButton.disabled = nextBusy || state.session.connected || state.session.authenticated_cookie_present;
         els.disconnectButton.disabled = nextBusy || !sessionCanDisconnect();
         els.scanButton.disabled = nextBusy || !sessionCanScan();
+        els.exportHistoryJsonButton.disabled = nextBusy || !effectiveHistoryUsername();
+        els.exportHistoryCsvButton.disabled = nextBusy || !effectiveHistoryUsername();
+        els.clearHistoryButton.disabled = nextBusy || !effectiveHistoryUsername();
       }
 
       function stopConnectPolling() {
@@ -1442,6 +2243,7 @@
               els.connectButton.textContent = "Connect Instagram";
               setBusy(false);
             }
+            await refreshHistory(resolvedSession.username);
             setStatus(`Instagram connected as @${resolvedSession.username}.`);
           }
           return resolvedSession;
@@ -1468,6 +2270,7 @@
             if (session.connected && session.username) {
               await cleanupLingeringLoginWindow();
               stopConnectPolling();
+              await refreshHistory(session.username);
               setStatus(session.username
                 ? `Instagram connected as @${session.username}.`
                 : "Instagram session connected. Username will be detected automatically during the scan.");
@@ -1506,6 +2309,7 @@
                   renderSession(resolvedSession);
                   if (resolvedSession.connected && resolvedSession.username) {
                     stopConnectPolling();
+                    await refreshHistory(resolvedSession.username);
                     setStatus(`Instagram connected as @${resolvedSession.username}.`);
                     els.connectButton.textContent = "Connect Instagram";
                     setBusy(false);
@@ -1549,6 +2353,17 @@
 
       function nextFrame() {
         return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+      }
+
+      function resetScrollPositions() {
+        if (els.sidebarPanel) {
+          els.sidebarPanel.scrollTop = 0;
+          els.sidebarPanel.scrollLeft = 0;
+        }
+        if (els.workspacePanel) {
+          els.workspacePanel.scrollTop = 0;
+          els.workspacePanel.scrollLeft = 0;
+        }
       }
 
       function setConnectionState(connected) {
@@ -1666,7 +2481,9 @@
       }
 
       function renderMeta(report) {
+        const sourceLabel = report.report_source === "history" ? "Saved snapshot" : "Live scan";
         const meta = [
+          `Source: ${sourceLabel}`,
           `Mode: ${report.mode_label}`,
           `Account: @${report.scan_username}`,
           `Matches: ${report.total_matches}`,
@@ -1755,13 +2572,80 @@
         `;
       }
 
+      function sortUsernamesLocal(usernames, sortMode) {
+        const list = [...usernames];
+        if (sortMode === "length") {
+          list.sort((left, right) => left.length - right.length || left.localeCompare(right));
+          return list;
+        }
+        list.sort((left, right) => left.localeCompare(right));
+        return list;
+      }
+
+      function currentReportModeLabel(mode) {
+        return {
+          nonfollowers: "Accounts you follow that do not follow you back",
+          fans: "Accounts that follow you, but you do not follow back",
+          mutuals: "Mutual follow relationships",
+        }[mode] || mode;
+      }
+
+      function applyLimitLocal(usernames, limit) {
+        if (!Number.isInteger(limit) || limit <= 0) {
+          return usernames;
+        }
+        return usernames.slice(0, limit);
+      }
+
+      function rebuildCurrentReportFromControls() {
+        if (!state.report) {
+          return;
+        }
+
+        const followers = new Set(state.report.followers_usernames || []);
+        const following = new Set(state.report.following_usernames || []);
+        const mode = els.modeSelect.value;
+        const sortMode = els.sortSelect.value;
+        const limit = els.limitInput.value ? Number(els.limitInput.value) : null;
+        const statsOnly = els.summaryOnlyToggle.checked;
+
+        const usernamesForMode = mode === "fans"
+          ? [...followers].filter((username) => !following.has(username))
+          : mode === "mutuals"
+            ? [...following].filter((username) => followers.has(username))
+            : [...following].filter((username) => !followers.has(username));
+        const allEntries = sortUsernamesLocal(usernamesForMode, sortMode).map((username) => ({
+          username,
+          profile_url: profileUrlFor(username),
+        }));
+        const entries = applyLimitLocal(allEntries, limit);
+
+        state.report = {
+          ...state.report,
+          mode,
+          mode_label: currentReportModeLabel(mode),
+          sort: sortMode,
+          limit,
+          stats_only: statsOnly,
+          entries,
+          all_entries: allEntries,
+          shown_matches: entries.length,
+          total_matches: allEntries.length,
+        };
+
+        renderReport(state.report);
+      }
+
       function renderReport(report) {
         state.report = report;
         els.resultsTitle.textContent = report.mode_label;
-        els.resultsSubtitle.textContent = `Current desktop snapshot for @${report.scan_username}. The app is calling the live engine directly and keeping the whole scan local.`;
+        els.resultsSubtitle.textContent = report.report_source === "live"
+          ? `Current desktop snapshot for @${report.scan_username}. The app is calling the live engine directly and keeping the whole scan local.`
+          : `Showing the latest saved snapshot for @${report.scan_username}. Run a fresh scan anytime to update this workspace.`;
         renderMeta(report);
         renderStats(report);
         renderWarnings(report);
+        renderHistory(report.history || emptyHistoryState(report.scan_username));
         renderInspect();
         renderTable();
       }
@@ -1792,6 +2676,26 @@
           : (session.authenticated_cookie_present
             ? "Instagram session is saved locally. Type your username manually or run a scan to finish account detection."
             : "No live desktop session yet. Connect Instagram to continue.")));
+        const history = await refreshHistory(session.username || els.usernameInput.value);
+        if (!state.report && history?.latest_snapshot_id && (history.username || session.username || els.usernameInput.value)) {
+          try {
+            const report = await call("get_latest_saved_report", {
+              username: history.username || session.username || els.usernameInput.value || null,
+              mode: els.modeSelect.value,
+              sortMode: els.sortSelect.value,
+              limit: els.limitInput.value ? Number(els.limitInput.value) : null,
+              statsOnly: els.summaryOnlyToggle.checked,
+            });
+            if (report) {
+              renderReport(report);
+              setStatus(session.connected
+                ? `Desktop session ready for @${report.scan_username}. Showing your latest saved snapshot.`
+                : `Showing the latest saved snapshot for @${report.scan_username}. Connect and run a scan to refresh it.`);
+            }
+          } catch (error) {
+            setDebug(`refreshLatestSavedReport: ${String(error)}`);
+          }
+        }
       }
 
       async function handleConnect() {
@@ -1822,6 +2726,7 @@
             setStatus(immediateSession.username
               ? `Instagram connected as @${immediateSession.username}.`
               : "Instagram session connected. Username will be detected automatically during the scan.");
+            await refreshHistory(immediateSession.username || username || null);
             return;
           }
           setDebug("handleConnect: polling started");
@@ -1847,6 +2752,7 @@
           const session = await call("disconnect_instagram");
           renderSession(session);
           state.report = null;
+          renderHistory(emptyHistoryState());
           renderWarnings(null);
           renderTable();
           renderInspect();
@@ -1906,6 +2812,92 @@
         }
       }
 
+      async function handleClearHistory() {
+        const username = effectiveHistoryUsername();
+        if (!username) {
+          setStatus("Run a scan or connect an account first so the app knows which history to clear.");
+          return;
+        }
+
+        try {
+          setBusy(true);
+          setStatus(`Clearing saved history for @${username}...`);
+          const payload = await call("clear_scan_history", { username });
+          state.selectedHistorySnapshotId = null;
+          state.compareHistorySnapshotId = null;
+          state.historyDetailExpanded = false;
+          state.historyDetail = null;
+          if (state.report?.scan_username === username) {
+            state.report = {
+              ...state.report,
+              history: payload?.history || emptyHistoryState(username),
+            };
+          }
+          renderHistory(payload?.history || emptyHistoryState(username));
+          setStatus(payload?.removed
+            ? `Removed ${payload.removed} saved history snapshot(s) for @${username}.`
+            : `No saved history snapshots were found for @${username}.`);
+        } catch (error) {
+          setStatus(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function handleExportHistory(format) {
+        const username = effectiveHistoryUsername();
+        if (!username) {
+          setStatus("Run a scan or connect an account first so the app knows which history to export.");
+          return;
+        }
+
+        try {
+          setBusy(true);
+          const payload = await call("export_scan_history", { username, format });
+          if (!payload?.path) {
+            setStatus(`No saved history snapshots were exported for @${username}.`);
+            return;
+          }
+          setStatus(`History exported for @${username} to ${payload.path}`);
+        } catch (error) {
+          setStatus(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function handleHistorySelection(event) {
+        const button = event.target.closest("[data-snapshot-id]");
+        if (!button) {
+          return;
+        }
+
+        const snapshotId = button.dataset.snapshotId || null;
+        if (!snapshotId) {
+          return;
+        }
+
+        if (snapshotId === state.selectedHistorySnapshotId) {
+          state.historyDetailExpanded = !state.historyDetailExpanded;
+        } else {
+          state.selectedHistorySnapshotId = snapshotId;
+          state.compareHistorySnapshotId = null;
+          state.historyDetailExpanded = true;
+        }
+        renderHistory(state.history);
+      }
+
+      function handleHistoryDetailChange(event) {
+        if (event.target.id !== "historyCompareSelect") {
+          return;
+        }
+
+        state.compareHistorySnapshotId = event.target.value || null;
+        if (state.historyDetailExpanded) {
+          void refreshHistoryDetail(effectiveHistoryUsername(), state.selectedHistorySnapshotId, state.compareHistorySnapshotId);
+        }
+      }
+
       async function init() {
         if (!invoke || !listen) {
           setDebug("init: tauri api unavailable");
@@ -1930,10 +2922,25 @@
             renderInspect();
           }
         });
-        els.summaryOnlyToggle.addEventListener("change", renderTable);
+        els.modeSelect.addEventListener("change", rebuildCurrentReportFromControls);
+        els.sortSelect.addEventListener("change", rebuildCurrentReportFromControls);
+        els.limitInput.addEventListener("change", rebuildCurrentReportFromControls);
+        els.summaryOnlyToggle.addEventListener("change", rebuildCurrentReportFromControls);
         els.diagnosticsToggle.addEventListener("change", () => renderWarnings(state.report));
+        els.historyList.addEventListener("click", handleHistorySelection);
+        els.historyDetail.addEventListener("change", handleHistoryDetailChange);
+        els.exportHistoryJsonButton.addEventListener("click", () => handleExportHistory("json"));
+        els.exportHistoryCsvButton.addEventListener("click", () => handleExportHistory("csv"));
+        els.clearHistoryButton.addEventListener("click", handleClearHistory);
+        els.usernameInput.addEventListener("change", () => {
+          if (!state.report) {
+            refreshHistory(els.usernameInput.value);
+          }
+        });
 
         renderWarnings(null);
+        renderHistory(emptyHistoryState());
+        resetScrollPositions();
         setDebug("init: listeners attached");
         await refreshSession();
         els.connectButton.textContent = "Connect Instagram";

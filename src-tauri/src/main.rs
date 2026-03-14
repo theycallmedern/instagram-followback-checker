@@ -2,6 +2,7 @@ use std::{
     io::{BufRead, BufReader, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use serde::{Deserialize, Serialize};
@@ -68,6 +69,118 @@ fn resolve_session_identity(app: tauri::AppHandle) -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn get_scan_history(app: tauri::AppHandle, username: Option<String>) -> Result<Value, String> {
+    run_bridge_json_command(&app, "history", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+        if let Some(username) = username.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--username").arg(username.trim());
+        }
+    })
+}
+
+#[tauri::command]
+fn get_latest_saved_report(
+    app: tauri::AppHandle,
+    username: Option<String>,
+    mode: String,
+    sort_mode: String,
+    limit: Option<u32>,
+    stats_only: bool,
+) -> Result<Value, String> {
+    run_bridge_json_command(&app, "latest-report", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+        if let Some(username) = username.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--username").arg(username.trim());
+        }
+        command.arg("--mode").arg(&mode);
+        command.arg("--sort").arg(&sort_mode);
+        if let Some(limit) = limit {
+            command.arg("--limit").arg(limit.to_string());
+        }
+        if stats_only {
+            command.arg("--stats-only");
+        }
+    })
+}
+
+#[tauri::command]
+fn get_scan_history_detail(
+    app: tauri::AppHandle,
+    username: Option<String>,
+    snapshot_id: Option<String>,
+    compare_snapshot_id: Option<String>,
+) -> Result<Value, String> {
+    run_bridge_json_command(&app, "history-detail", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+        if let Some(username) = username.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--username").arg(username.trim());
+        }
+        if let Some(snapshot_id) = snapshot_id.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--snapshot-id").arg(snapshot_id.trim());
+        }
+        if let Some(compare_snapshot_id) = compare_snapshot_id
+            .as_ref()
+            .filter(|value| !value.trim().is_empty())
+        {
+            command
+                .arg("--compare-snapshot-id")
+                .arg(compare_snapshot_id.trim());
+        }
+    })
+}
+
+#[tauri::command]
+fn clear_scan_history(app: tauri::AppHandle, username: Option<String>) -> Result<Value, String> {
+    run_bridge_json_command(&app, "clear-history", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+        if let Some(username) = username.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--username").arg(username.trim());
+        }
+    })
+}
+
+#[tauri::command]
+fn export_scan_history(
+    app: tauri::AppHandle,
+    username: Option<String>,
+    format: String,
+) -> Result<Value, String> {
+    let normalized_format = format.trim().to_lowercase();
+    if normalized_format != "json" && normalized_format != "csv" {
+        return Err("Unsupported export format. Use json or csv.".to_string());
+    }
+
+    let export_dir = resolve_history_export_dir(&app)?;
+    std::fs::create_dir_all(&export_dir)
+        .map_err(|error| format!("Failed to create the export directory: {error}"))?;
+
+    let sanitized_username = username
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| sanitize_filename_fragment(value))
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "instagram".to_string());
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| format!("Failed to resolve the export timestamp: {error}"))?
+        .as_secs();
+    let output_path = export_dir.join(format!(
+        "instagram-followback-history-{}-{}.{}",
+        sanitized_username, timestamp, normalized_format
+    ));
+
+    run_bridge_json_command(&app, "export-history", |command, invocation| {
+        command.arg("--session-dir").arg(&invocation.session_dir);
+        if let Some(username) = username.as_ref().filter(|value| !value.trim().is_empty()) {
+            command.arg("--username").arg(username.trim());
+        }
+        command.arg("--format").arg(&normalized_format);
+        command.arg("--output-path").arg(&output_path);
+    })
+}
+
+#[tauri::command]
 fn disconnect_instagram(app: tauri::AppHandle) -> Result<Value, String> {
     run_bridge_json_command(&app, "disconnect", |command, invocation| {
         command.arg("--session-dir").arg(&invocation.session_dir);
@@ -96,6 +209,11 @@ fn main() {
             get_session_status,
             connect_instagram,
             resolve_session_identity,
+            get_scan_history,
+            get_latest_saved_report,
+            get_scan_history_detail,
+            clear_scan_history,
+            export_scan_history,
             disconnect_instagram,
             cleanup_instagram_login_processes,
             run_live_scan,
@@ -420,6 +538,30 @@ fn resolve_session_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     std::fs::create_dir_all(&base_dir)
         .map_err(|error| format!("Failed to create the desktop app data directory: {error}"))?;
     Ok(base_dir.join("live-session"))
+}
+
+fn resolve_history_export_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    if let Ok(path) = app.path().download_dir() {
+        return Ok(path);
+    }
+    if let Ok(path) = app.path().desktop_dir() {
+        return Ok(path);
+    }
+    app.path()
+        .document_dir()
+        .map_err(|error| format!("Failed to resolve an export directory for history files: {error}"))
+}
+
+fn sanitize_filename_fragment(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| match character {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => character,
+            _ => '-',
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_lowercase()
 }
 
 fn find_python_executable(runtime_root: &Path) -> Option<PathBuf> {
