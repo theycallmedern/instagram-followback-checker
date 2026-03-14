@@ -2,12 +2,13 @@
 
 ## Supported Versions
 
-Only the latest state of the `main` branch is treated as supported.
+Only the latest state of the `main` branch and the latest tagged release are treated as supported.
 
 At the moment that means:
 
-- `0.3.x` — supported
-- older versions — unsupported
+- `main` — supported
+- `0.4.x` — supported
+- older releases — unsupported
 
 ## Sensitive Data In This Project
 
@@ -15,7 +16,8 @@ This repository is local-first and may interact with a real Instagram session.
 
 Treat the following as sensitive:
 
-- desktop session data under `~/Library/Application Support/com.mishabelyakov.instagramfollowback/live-session`
+- desktop session data under the app-local Tauri data directory
+- macOS desktop session data under `~/Library/Application Support/com.mishabelakov.instagramfollowback/live-session`
 - web UI session data under `~/.instagram-followback-checker/live-session`
 - browser state, cookies, or Playwright profile files
 - exported reports with real usernames or profile URLs
