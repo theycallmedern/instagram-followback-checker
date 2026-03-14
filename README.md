@@ -32,6 +32,9 @@ The app connects to a real Instagram session, runs a local scan, and presents th
 
 It is designed for people who want a cleaner alternative to ad-heavy web tools, repeated export imports, or one-off scripts that are hard to trust or reuse.
 
+> [!IMPORTANT]
+> The default product flow is local-first. The desktop app, saved session, reports, and history snapshots stay on your machine unless you explicitly export data yourself.
+
 ### Why it exists
 
 Most followback tools trade away clarity in one of two ways: they either rely on static export files, or they ask you to trust a hosted service with account access and session data.
@@ -100,6 +103,9 @@ Instagram Followback takes a simpler approach:
 
 If you want the packaged desktop app, start with the latest GitHub release.
 
+> [!TIP]
+> If you only want to use the product, install from GitHub Releases instead of building from source.
+
 - Latest release: `https://github.com/theycallmedern/instagram-followback-checker/releases/latest`
 - All releases: `https://github.com/theycallmedern/instagram-followback-checker/releases`
 - Download for macOS: [latest `.dmg`](https://github.com/theycallmedern/instagram-followback-checker/releases/latest)
@@ -125,6 +131,9 @@ If you want the packaged desktop app, start with the latest GitHub release.
 - Node.js and npm
 - Rust and Cargo
 - macOS or Windows recommended for desktop packaging
+
+> [!NOTE]
+> `desktop:build-windows` is intended for a Windows host. If you do not have one locally, use the GitHub Actions desktop workflow to produce Windows artifacts.
 
 #### Installation
 
@@ -206,6 +215,9 @@ After a successful scan, the desktop app can keep:
 - history snapshots for that account
 - optional exported history files when you explicitly export them
 
+> [!NOTE]
+> This is what allows the app to reopen with the latest saved snapshot already visible instead of starting from an empty workspace every time.
+
 ## Project Structure
 
 | Path | Purpose |
@@ -230,6 +242,9 @@ Instagram Followback is intentionally local-first.
 - Reports and history snapshots remain local unless you export them yourself.
 - `Disconnect` clears the saved desktop session.
 - Repository screenshots use synthetic demo data, not real account data.
+
+> [!WARNING]
+> This project interacts with a real Instagram session in your local browser environment. Review the code, use a machine you trust, and avoid running modified builds from untrusted sources.
 
 For security expectations and reporting guidance, see [SECURITY.md](./SECURITY.md).
 
@@ -268,6 +283,9 @@ cargo check --manifest-path src-tauri/Cargo.toml
 ```bash
 python3 scripts/capture_desktop_screenshots.py
 ```
+
+> [!TIP]
+> The repository screenshots are generated from synthetic demo state so the documentation can stay realistic without exposing real account data.
 
 ## Contributing
 
