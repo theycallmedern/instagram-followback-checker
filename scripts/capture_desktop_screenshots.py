@@ -379,6 +379,10 @@ def populate_history_state(page) -> None:
         """
         () => {
           renderReport(window.__DOCS_MOCK__.report);
+          document.getElementById('summaryOnlyToggle').checked = true;
+          rebuildCurrentReportFromControls();
+          document.getElementById('diagnosticsToggle').checked = true;
+          renderWarnings(state.report);
           state.selectedHistorySnapshotId = window.__DOCS_MOCK__.history_detail.snapshot.snapshot_id;
           state.compareHistorySnapshotId = window.__DOCS_MOCK__.history_detail.comparison_snapshot.snapshot_id;
           state.historyDetailExpanded = true;
@@ -490,7 +494,7 @@ def capture_history_showcase(page) -> None:
           const workspace = document.getElementById('workspacePanel');
           const historyCard = document.querySelector('.history-card');
           if (workspace && historyCard) {
-            const top = historyCard.offsetTop - 24;
+            const top = historyCard.offsetTop - 180;
             workspace.scrollTop = Math.max(0, top);
           }
         }
