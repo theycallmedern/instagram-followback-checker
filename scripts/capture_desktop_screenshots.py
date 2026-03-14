@@ -53,6 +53,7 @@ def build_report() -> dict[str, object]:
     return {
         "scan_username": "studio.demo",
         "created_at": "2026-03-13T12:48:00Z",
+        "report_source": "live",
         "mode": "nonfollowers",
         "mode_label": "Accounts you follow that do not follow you back",
         "sort": "alpha",
@@ -100,6 +101,129 @@ def build_report() -> dict[str, object]:
     }
 
 
+def build_history() -> dict[str, object]:
+    return {
+        "username": "studio.demo",
+        "latest_snapshot_id": "snap-20260313-124800",
+        "previous_snapshot_id": "snap-20260312-184500",
+        "changes": {
+            "new_nonfollowers": ["atelierframe", "quietarchive", "studioharbor"],
+            "returned_mutuals": ["northlight", "open.room"],
+            "disappeared_fans": ["calm.signal"],
+        },
+        "entries": [
+            {
+                "snapshot_id": "snap-20260313-124800",
+                "username": "studio.demo",
+                "created_at": "2026-03-13T12:48:00Z",
+                "stats": {
+                    "followers": 412,
+                    "following": 538,
+                    "nonfollowers": 126,
+                    "fans": 49,
+                    "mutuals": 363,
+                },
+                "has_warnings": True,
+                "warning_count": 2,
+            },
+            {
+                "snapshot_id": "snap-20260312-184500",
+                "username": "studio.demo",
+                "created_at": "2026-03-12T18:45:00Z",
+                "stats": {
+                    "followers": 408,
+                    "following": 531,
+                    "nonfollowers": 123,
+                    "fans": 50,
+                    "mutuals": 358,
+                },
+                "has_warnings": False,
+                "warning_count": 0,
+            },
+            {
+                "snapshot_id": "snap-20260310-093000",
+                "username": "studio.demo",
+                "created_at": "2026-03-10T09:30:00Z",
+                "stats": {
+                    "followers": 401,
+                    "following": 520,
+                    "nonfollowers": 119,
+                    "fans": 53,
+                    "mutuals": 348,
+                },
+                "has_warnings": False,
+                "warning_count": 0,
+            },
+        ],
+    }
+
+
+def build_history_detail() -> dict[str, object]:
+    return {
+        "username": "studio.demo",
+        "comparison_mode": "custom",
+        "changes": {
+            "new_nonfollowers": ["atelierframe", "quietarchive", "studioharbor"],
+            "returned_mutuals": ["northlight", "open.room"],
+            "disappeared_fans": ["calm.signal"],
+        },
+        "available_comparisons": [
+            {
+                "snapshot_id": "snap-20260312-184500",
+                "created_at": "2026-03-12T18:45:00Z",
+                "stats": {"nonfollowers": 123, "fans": 50, "mutuals": 358},
+            },
+            {
+                "snapshot_id": "snap-20260310-093000",
+                "created_at": "2026-03-10T09:30:00Z",
+                "stats": {"nonfollowers": 119, "fans": 53, "mutuals": 348},
+            },
+        ],
+        "comparison_snapshot": {
+            "snapshot_id": "snap-20260310-093000",
+            "username": "studio.demo",
+            "created_at": "2026-03-10T09:30:00Z",
+            "stats": {
+                "followers": 401,
+                "following": 520,
+                "nonfollowers": 119,
+                "fans": 53,
+                "mutuals": 348,
+            },
+        },
+        "snapshot": {
+            "snapshot_id": "snap-20260313-124800",
+            "username": "studio.demo",
+            "created_at": "2026-03-13T12:48:00Z",
+            "stats": {
+                "followers": 412,
+                "following": 538,
+                "nonfollowers": 126,
+                "fans": 49,
+                "mutuals": 363,
+            },
+            "has_warnings": True,
+            "warning_count": 2,
+            "warnings": [
+                "Instagram hid part of one dialog while the scanner was collecting results.",
+                "One profile was skipped because the relation link changed during the scan.",
+            ],
+            "mode_lists": {
+                "nonfollowers": [
+                    "atelierframe",
+                    "fwdvision",
+                    "nova.collective",
+                    "quietarchive",
+                    "studioharbor",
+                    "northlight",
+                ],
+                "fans": ["calm.signal", "field.note", "open.room"],
+                "mutuals": ["northlight", "open.room", "studio.demo", "field.note"],
+            },
+        },
+    }
+
+
 def build_mock_script() -> str:
     session = {
         "connected": True,
@@ -108,7 +232,12 @@ def build_mock_script() -> str:
         "browser_state_present": True,
         "session_dir": "/Users/demo/Library/Application Support/com.mishabelyakov.instagramfollowback/live-session",
     }
-    report = build_report()
+    history = build_history()
+    detail = build_history_detail()
+    report = {
+        **build_report(),
+        "history": history,
+    }
     progress_steps = [
         {"phase": "boot", "message": "Launching the local analysis runtime.", "progress": 6},
         {"phase": "auth", "message": "Reusing the saved Instagram session.", "progress": 18},
@@ -121,6 +250,7 @@ def build_mock_script() -> str:
             "session": session,
             "report": report,
             "progress_steps": progress_steps,
+            "history_detail": detail,
         }
     )
     return f"""
@@ -156,6 +286,39 @@ def build_mock_script() -> str:
                 }}
                 await new Promise((resolve) => setTimeout(resolve, 120));
                 return payload.report;
+              }}
+              if (command === "get_scan_history") {{
+                return payload.report.history;
+              }}
+              if (command === "get_scan_history_detail") {{
+                return payload.history_detail;
+              }}
+              if (command === "get_latest_saved_report") {{
+                return {{
+                  ...payload.report,
+                  report_source: "history",
+                }};
+              }}
+              if (command === "clear_scan_history") {{
+                return {{
+                  removed: payload.report.history.entries.length,
+                  history: {{
+                    username: payload.report.history.username,
+                    latest_snapshot_id: null,
+                    previous_snapshot_id: null,
+                    entries: [],
+                    changes: {{
+                      new_nonfollowers: [],
+                      returned_mutuals: [],
+                      disappeared_fans: [],
+                    }},
+                  }},
+                }};
+              }}
+              if (command === "export_scan_history") {{
+                return {{
+                  path: "/Users/demo/Downloads/studio-demo-history.json",
+                }};
               }}
               throw new Error(`Unsupported mocked command: ${{command}}`);
             }},
@@ -206,6 +369,22 @@ def populate_results_state(page) -> None:
           document.getElementById('inspectInput').value = 'northlight';
           renderInspect();
           setStatus('Live scan completed for @studio.demo.');
+        }
+        """
+    )
+
+
+def populate_history_state(page) -> None:
+    page.evaluate(
+        """
+        () => {
+          renderReport(window.__DOCS_MOCK__.report);
+          state.selectedHistorySnapshotId = window.__DOCS_MOCK__.history_detail.snapshot.snapshot_id;
+          state.compareHistorySnapshotId = window.__DOCS_MOCK__.history_detail.comparison_snapshot.snapshot_id;
+          state.historyDetailExpanded = true;
+          renderHistory(window.__DOCS_MOCK__.report.history);
+          renderHistoryDetail(window.__DOCS_MOCK__.history_detail);
+          setStatus('Showing saved snapshot history for @studio.demo.');
         }
         """
     )
@@ -303,6 +482,16 @@ def capture_feature_gallery(page) -> None:
     )
 
 
+def capture_history_showcase(page) -> None:
+    populate_history_state(page)
+    capture_region(
+        page,
+        [".history-card"],
+        OUTPUT_DIR / "history-timeline.png",
+        padding=16,
+    )
+
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if DEFAULT_BROWSERS_PATH.exists():
@@ -332,6 +521,12 @@ def main() -> None:
             page.goto(url, wait_until="networkidle")
             time.sleep(0.25)
             capture_feature_gallery(page)
+
+            page = context.new_page()
+            page.add_init_script(build_mock_script())
+            page.goto(url, wait_until="networkidle")
+            time.sleep(0.25)
+            capture_history_showcase(page)
             context.close()
         finally:
             browser.close()

@@ -60,13 +60,28 @@ The result is a tool that feels less like a hack and more like a serious local p
 ## Screenshots
 
 > [!NOTE]
-> The screenshot below is a synthetic product capture generated from the desktop UI. It does not contain real account data.
+> The screenshots below are synthetic product captures generated from mocked desktop data. They do not contain real account data.
 
 <p align="center">
-  <img src="./docs/screenshots/hero-workspace.png" alt="Wide desktop hero showing the connected Instagram workspace, summary metrics, and polished product shell" width="960" />
+  <img src="./docs/screenshots/hero-workspace.png" alt="Wide desktop hero showing the connected Instagram workspace, summary metrics, relationship table, and local-first product shell" width="960" />
   <br />
-  <strong>One local workspace for connection, scanning, and review</strong>
+  <strong>One local workspace for connection, scanning, saved history, and review</strong>
 </p>
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top">
+      <img src="./docs/screenshots/history-timeline.png" alt="Saved scan timeline showing snapshot cards, local deltas, and expanded history detail comparison" width="720" />
+      <br />
+      <strong>Saved scan timeline with snapshot drill-down and comparison</strong>
+    </td>
+    <td align="center" valign="top">
+      <img src="./docs/screenshots/inspector-diagnostics.png" alt="Inspector and diagnostics panel showing one-account relationship checks and warning metadata" width="360" />
+      <br />
+      <strong>Inspector and diagnostics for targeted checks</strong>
+    </td>
+  </tr>
+</table>
 
 ## Desktop Quick Start
 
