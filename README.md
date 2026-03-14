@@ -13,18 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/theycallmedern/instagram-followback-checker/releases/latest">
-    <img alt="Latest Release" src="https://img.shields.io/github/v/release/theycallmedern/instagram-followback-checker?display_name=tag&style=flat-square">
-  </a>
-  <a href="https://github.com/theycallmedern/instagram-followback-checker/actions/workflows/desktop-build.yml">
-    <img alt="Desktop Build" src="https://img.shields.io/github/actions/workflow/status/theycallmedern/instagram-followback-checker/desktop-build.yml?style=flat-square&label=desktop%20build">
-  </a>
-  <a href="./LICENSE">
-    <img alt="License" src="https://img.shields.io/badge/license-MIT-1f2937?style=flat-square">
-  </a>
-  <a href="./SECURITY.md">
-    <img alt="Security" src="https://img.shields.io/badge/security-local--first-1f2937?style=flat-square">
-  </a>
+  <a href="https://github.com/theycallmedern/instagram-followback-checker/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/theycallmedern/instagram-followback-checker?display_name=tag&style=flat-square"></a><a href="https://github.com/theycallmedern/instagram-followback-checker/actions/workflows/desktop-build.yml"><img alt="Desktop Build" src="https://img.shields.io/github/actions/workflow/status/theycallmedern/instagram-followback-checker/desktop-build.yml?style=flat-square&label=desktop%20build"></a><a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-1f2937?style=flat-square"></a><a href="./SECURITY.md"><img alt="Security" src="https://img.shields.io/badge/security-local--first-1f2937?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -113,6 +102,8 @@ If you want the packaged desktop app, start with the latest GitHub release.
 
 - Latest release: `https://github.com/theycallmedern/instagram-followback-checker/releases/latest`
 - All releases: `https://github.com/theycallmedern/instagram-followback-checker/releases`
+- Download for macOS: [latest `.dmg`](https://github.com/theycallmedern/instagram-followback-checker/releases/latest)
+- Download for Windows: [latest installer `.exe`](https://github.com/theycallmedern/instagram-followback-checker/releases/latest)
 
 **macOS**
 
@@ -277,15 +268,6 @@ cargo check --manifest-path src-tauri/Cargo.toml
 ```bash
 python3 scripts/capture_desktop_screenshots.py
 ```
-
-## Roadmap
-
-Near-term work is focused on product depth and reliability:
-
-- continued refinement of saved scan history and comparison workflows
-- better diagnostics and recovery around live scan edge cases
-- further polish for desktop packaging and release automation
-- ongoing documentation and onboarding improvements
 
 ## Contributing
 
