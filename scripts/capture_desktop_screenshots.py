@@ -484,12 +484,38 @@ def capture_feature_gallery(page) -> None:
 
 def capture_history_showcase(page) -> None:
     populate_history_state(page)
-    capture_region(
-        page,
-        [".history-card"],
-        OUTPUT_DIR / "history-timeline.png",
-        padding=16,
+    page.evaluate(
+        """
+        () => {
+          const workspace = document.getElementById('workspacePanel');
+          const historyCard = document.querySelector('.history-card');
+          if (workspace && historyCard) {
+            const top = historyCard.offsetTop - 24;
+            workspace.scrollTop = Math.max(0, top);
+          }
+        }
+        """
     )
+    time.sleep(0.2)
+    page.screenshot(path=str(OUTPUT_DIR / "history-timeline.png"))
+
+
+def capture_inspector_showcase(page) -> None:
+    populate_results_state(page)
+    page.evaluate(
+        """
+        () => {
+          document.getElementById('diagnosticsToggle').checked = true;
+          renderWarnings(window.__DOCS_MOCK__.report);
+          const workspace = document.getElementById('workspacePanel');
+          if (workspace) {
+            workspace.scrollTop = 180;
+          }
+        }
+        """
+    )
+    time.sleep(0.2)
+    page.screenshot(path=str(OUTPUT_DIR / "inspector-diagnostics.png"))
 
 
 def main() -> None:
@@ -527,6 +553,12 @@ def main() -> None:
             page.goto(url, wait_until="networkidle")
             time.sleep(0.25)
             capture_history_showcase(page)
+
+            page = context.new_page()
+            page.add_init_script(build_mock_script())
+            page.goto(url, wait_until="networkidle")
+            time.sleep(0.25)
+            capture_inspector_showcase(page)
             context.close()
         finally:
             browser.close()
