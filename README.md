@@ -65,19 +65,19 @@ The result is a tool that feels less like a hack and more like a serious local p
 <p align="center">
   <img src="./docs/screenshots/hero-workspace.png" alt="Wide desktop hero showing the connected Instagram workspace, summary metrics, relationship table, and local-first product shell" width="960" />
   <br />
-  <strong>One local workspace for connection, scanning, saved history, and review</strong>
+  <strong>One local workspace for connection, scanning, diagnostics, and review</strong>
 </p>
 
 <p align="center">
   <img src="./docs/screenshots/history-timeline.png" alt="Saved scan timeline showing snapshot cards, local deltas, and expanded history detail comparison" width="960" />
   <br />
-  <strong>Saved scan timeline with snapshot drill-down and comparison</strong>
+  <strong>Saved scan timeline with local deltas and snapshot comparison</strong>
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/inspector-diagnostics.png" alt="Inspector and diagnostics panel showing one-account relationship checks and warning metadata" width="960" />
+  <img src="./docs/screenshots/history-detail.png" alt="Expanded snapshot detail view showing comparison changes and saved snapshot lists for the selected timeline entry" width="960" />
   <br />
-  <strong>Inspector and diagnostics for targeted checks</strong>
+  <strong>Expanded snapshot details with per-scan lists and change tracking</strong>
 </p>
 
 ## Desktop Quick Start

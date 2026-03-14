@@ -43,12 +43,16 @@ def avatar_data_url(initials: str, *, start: str, end: str) -> str:
 
 def build_report() -> dict[str, object]:
     entries = [
-        {"username": "northlight", "profile_url": "https://www.instagram.com/northlight/"},
         {"username": "atelierframe", "profile_url": "https://www.instagram.com/atelierframe/"},
-        {"username": "nova.collective", "profile_url": "https://www.instagram.com/nova.collective/"},
-        {"username": "studioharbor", "profile_url": "https://www.instagram.com/studioharbor/"},
         {"username": "fwdvision", "profile_url": "https://www.instagram.com/fwdvision/"},
+        {"username": "nonfollow_001", "profile_url": "https://www.instagram.com/nonfollow_001/"},
+        {"username": "nonfollow_002", "profile_url": "https://www.instagram.com/nonfollow_002/"},
+        {"username": "nonfollow_003", "profile_url": "https://www.instagram.com/nonfollow_003/"},
+        {"username": "nonfollow_004", "profile_url": "https://www.instagram.com/nonfollow_004/"},
+        {"username": "nonfollow_005", "profile_url": "https://www.instagram.com/nonfollow_005/"},
+        {"username": "nova.collective", "profile_url": "https://www.instagram.com/nova.collective/"},
         {"username": "quietarchive", "profile_url": "https://www.instagram.com/quietarchive/"},
+        {"username": "studioharbor", "profile_url": "https://www.instagram.com/studioharbor/"},
     ]
     return {
         "scan_username": "studio.demo",
@@ -61,8 +65,8 @@ def build_report() -> dict[str, object]:
         "stats_only": False,
         "stats": {
             "followers": 412,
-            "following": 538,
-            "nonfollowers": 126,
+            "following": 373,
+            "nonfollowers": 10,
             "fans": 49,
             "mutuals": 363,
         },
@@ -81,19 +85,15 @@ def build_report() -> dict[str, object]:
             "open.room",
             "studio.demo",
         ],
-        "following_usernames": [
-            "atelierframe",
+        "following_usernames": [entry["username"] for entry in entries] + [
             "northlight",
-            "nova.collective",
-            "quietarchive",
+            "open.room",
             "studio.demo",
-            "studioharbor",
-            "fwdvision",
         ],
         "entries": entries,
         "all_entries": entries,
         "shown_matches": len(entries),
-        "total_matches": 126,
+        "total_matches": len(entries),
         "used_files": {
             "followers": ["live-instagram://studio.demo/followers"],
             "following": ["live-instagram://studio.demo/following"],
@@ -107,9 +107,9 @@ def build_history() -> dict[str, object]:
         "latest_snapshot_id": "snap-20260313-124800",
         "previous_snapshot_id": "snap-20260312-184500",
         "changes": {
-            "new_nonfollowers": ["atelierframe", "quietarchive", "studioharbor"],
-            "returned_mutuals": ["northlight", "open.room"],
-            "disappeared_fans": ["calm.signal"],
+            "new_nonfollowers": ["nonfollow_004", "nonfollow_005"],
+            "returned_mutuals": ["mutual_357", "mutual_358", "mutual_359", "mutual_360", "mutual_361"],
+            "disappeared_fans": ["fan_048"],
         },
         "entries": [
             {
@@ -118,8 +118,8 @@ def build_history() -> dict[str, object]:
                 "created_at": "2026-03-13T12:48:00Z",
                 "stats": {
                     "followers": 412,
-                    "following": 538,
-                    "nonfollowers": 126,
+                    "following": 373,
+                    "nonfollowers": 10,
                     "fans": 49,
                     "mutuals": 363,
                 },
@@ -132,8 +132,8 @@ def build_history() -> dict[str, object]:
                 "created_at": "2026-03-12T18:45:00Z",
                 "stats": {
                     "followers": 408,
-                    "following": 531,
-                    "nonfollowers": 123,
+                    "following": 366,
+                    "nonfollowers": 8,
                     "fans": 50,
                     "mutuals": 358,
                 },
@@ -146,8 +146,8 @@ def build_history() -> dict[str, object]:
                 "created_at": "2026-03-10T09:30:00Z",
                 "stats": {
                     "followers": 401,
-                    "following": 520,
-                    "nonfollowers": 119,
+                    "following": 354,
+                    "nonfollowers": 6,
                     "fans": 53,
                     "mutuals": 348,
                 },
@@ -161,34 +161,34 @@ def build_history() -> dict[str, object]:
 def build_history_detail() -> dict[str, object]:
     return {
         "username": "studio.demo",
-        "comparison_mode": "custom",
+        "comparison_mode": "previous",
         "changes": {
-            "new_nonfollowers": ["atelierframe", "quietarchive", "studioharbor"],
-            "returned_mutuals": ["northlight", "open.room"],
-            "disappeared_fans": ["calm.signal"],
+            "new_nonfollowers": ["nonfollow_004", "nonfollow_005"],
+            "returned_mutuals": ["mutual_357", "mutual_358", "mutual_359", "mutual_360", "mutual_361"],
+            "disappeared_fans": ["fan_048"],
         },
         "available_comparisons": [
             {
                 "snapshot_id": "snap-20260312-184500",
                 "created_at": "2026-03-12T18:45:00Z",
-                "stats": {"nonfollowers": 123, "fans": 50, "mutuals": 358},
+                "stats": {"nonfollowers": 8, "fans": 50, "mutuals": 358},
             },
             {
                 "snapshot_id": "snap-20260310-093000",
                 "created_at": "2026-03-10T09:30:00Z",
-                "stats": {"nonfollowers": 119, "fans": 53, "mutuals": 348},
+                "stats": {"nonfollowers": 6, "fans": 53, "mutuals": 348},
             },
         ],
         "comparison_snapshot": {
-            "snapshot_id": "snap-20260310-093000",
+            "snapshot_id": "snap-20260312-184500",
             "username": "studio.demo",
-            "created_at": "2026-03-10T09:30:00Z",
+            "created_at": "2026-03-12T18:45:00Z",
             "stats": {
-                "followers": 401,
-                "following": 520,
-                "nonfollowers": 119,
-                "fans": 53,
-                "mutuals": 348,
+                "followers": 408,
+                "following": 366,
+                "nonfollowers": 8,
+                "fans": 50,
+                "mutuals": 358,
             },
         },
         "snapshot": {
@@ -197,8 +197,8 @@ def build_history_detail() -> dict[str, object]:
             "created_at": "2026-03-13T12:48:00Z",
             "stats": {
                 "followers": 412,
-                "following": 538,
-                "nonfollowers": 126,
+                "following": 373,
+                "nonfollowers": 10,
                 "fans": 49,
                 "mutuals": 363,
             },
@@ -212,13 +212,17 @@ def build_history_detail() -> dict[str, object]:
                 "nonfollowers": [
                     "atelierframe",
                     "fwdvision",
+                    "nonfollow_001",
+                    "nonfollow_002",
+                    "nonfollow_003",
+                    "nonfollow_004",
+                    "nonfollow_005",
                     "nova.collective",
                     "quietarchive",
                     "studioharbor",
-                    "northlight",
                 ],
-                "fans": ["calm.signal", "field.note", "open.room"],
-                "mutuals": ["northlight", "open.room", "studio.demo", "field.note"],
+                "fans": ["calm.signal", "fan_001", "fan_002", "fan_003", "fan_004", "fan_005", "fan_006", "fan_007", "fan_008", "fan_009", "fan_010", "fan_011", "fan_012", "fan_013", "fan_014", "fan_015", "fan_016", "fan_017"],
+                "mutuals": ["mutual_001", "mutual_002", "mutual_003", "mutual_004", "mutual_005", "mutual_006", "mutual_007", "mutual_008", "mutual_009", "mutual_010", "mutual_011", "mutual_012", "mutual_013", "mutual_014", "mutual_015", "mutual_016", "mutual_017", "mutual_018"],
             },
         },
     }
@@ -379,8 +383,6 @@ def populate_history_state(page) -> None:
         """
         () => {
           renderReport(window.__DOCS_MOCK__.report);
-          document.getElementById('summaryOnlyToggle').checked = true;
-          rebuildCurrentReportFromControls();
           document.getElementById('diagnosticsToggle').checked = true;
           renderWarnings(state.report);
           state.selectedHistorySnapshotId = window.__DOCS_MOCK__.history_detail.snapshot.snapshot_id;
@@ -522,6 +524,24 @@ def capture_inspector_showcase(page) -> None:
     page.screenshot(path=str(OUTPUT_DIR / "inspector-diagnostics.png"))
 
 
+def capture_history_detail_showcase(page) -> None:
+    populate_history_state(page)
+    page.evaluate(
+        """
+        () => {
+          const workspace = document.getElementById('workspacePanel');
+          const detail = document.getElementById('historyDetail');
+          if (workspace && detail) {
+            const top = detail.offsetTop - 22;
+            workspace.scrollTop = Math.max(0, top);
+          }
+        }
+        """
+    )
+    time.sleep(0.2)
+    page.screenshot(path=str(OUTPUT_DIR / "history-detail.png"))
+
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if DEFAULT_BROWSERS_PATH.exists():
@@ -562,7 +582,7 @@ def main() -> None:
             page.add_init_script(build_mock_script())
             page.goto(url, wait_until="networkidle")
             time.sleep(0.25)
-            capture_inspector_showcase(page)
+            capture_history_detail_showcase(page)
             context.close()
         finally:
             browser.close()
