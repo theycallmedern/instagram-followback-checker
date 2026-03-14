@@ -68,20 +68,17 @@ The result is a tool that feels less like a hack and more like a serious local p
   <strong>One local workspace for connection, scanning, saved history, and review</strong>
 </p>
 
-<table align="center">
-  <tr>
-    <td align="center" valign="top">
-      <img src="./docs/screenshots/history-timeline.png" alt="Saved scan timeline showing snapshot cards, local deltas, and expanded history detail comparison" width="720" />
-      <br />
-      <strong>Saved scan timeline with snapshot drill-down and comparison</strong>
-    </td>
-    <td align="center" valign="top">
-      <img src="./docs/screenshots/inspector-diagnostics.png" alt="Inspector and diagnostics panel showing one-account relationship checks and warning metadata" width="360" />
-      <br />
-      <strong>Inspector and diagnostics for targeted checks</strong>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="./docs/screenshots/history-timeline.png" alt="Saved scan timeline showing snapshot cards, local deltas, and expanded history detail comparison" width="960" />
+  <br />
+  <strong>Saved scan timeline with snapshot drill-down and comparison</strong>
+</p>
+
+<p align="center">
+  <img src="./docs/screenshots/inspector-diagnostics.png" alt="Inspector and diagnostics panel showing one-account relationship checks and warning metadata" width="960" />
+  <br />
+  <strong>Inspector and diagnostics for targeted checks</strong>
+</p>
 
 ## Desktop Quick Start
 
