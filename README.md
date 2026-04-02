@@ -63,15 +63,15 @@ Instagram Followback takes a simpler approach:
 > The screenshots below are synthetic captures generated from demo data. They do not contain real account data.
 
 <p align="center">
-  <img src="./docs/screenshots/hero-workspace.png" alt="Desktop workspace showing the connected account, summary metrics, relationship table, inspector, diagnostics, and saved history" width="960" />
+  <img src="./docs/screenshots/hero-workspace.png" alt="Laptop mockup showing the connected account, summary metrics, relationship table, inspector, and diagnostics" width="960" />
 </p>
 
 <p align="center">
-  <strong>Main workspace for scanning, filtering, review, and diagnostics</strong>
+  <strong>Main workspace for local scanning, filtering, review, and diagnostics</strong>
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/history-timeline.png" alt="Saved scan timeline showing local deltas, snapshot rows, export actions, and warnings" width="960" />
+  <img src="./docs/screenshots/history-timeline.png" alt="Laptop mockup showing the saved scan timeline, export actions, and warning cards" width="960" />
 </p>
 
 <p align="center">
@@ -79,7 +79,7 @@ Instagram Followback takes a simpler approach:
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/history-detail.png" alt="Expanded snapshot detail view with comparison changes and saved lists for non-followers, fans, and mutuals" width="960" />
+  <img src="./docs/screenshots/history-detail.png" alt="Laptop mockup showing comparison changes and saved lists for non-followers, fans, and mutuals" width="960" />
 </p>
 
 <p align="center">
